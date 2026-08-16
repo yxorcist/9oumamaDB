@@ -1,0 +1,32 @@
+[
+  {
+    "file": "src/main.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "src/main.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/db.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "src/db.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  }
+]
