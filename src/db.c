@@ -4,48 +4,20 @@
 #include "db.h"
 #include "entry.h"
 #include "hash_table.h"
+#include "storage.h"
 
 struct DB {
+  Storage *storage;
   HashTable *ht;
   BST *tree;
-
-  Entry **entries;
-  int count;
-  int capacity;
 };
-
-static void grow_entries(DB *db) {
-  db->capacity *= 2;
-  db->entries = realloc(db->entries, db->capacity * sizeof(Entry *));
-}
-
-static void add_entry(DB *db, Entry *entry) {
-  if (db->count == db->capacity)
-    grow_entries(db);
-
-  db->entries[db->count] = entry;
-  db->count++;
-}
-
-static void remove_entry(DB *db, Entry *entry) {
-  for (int i = 0; i < db->count; i++) {
-    if (db->entries[i] == entry) {
-      db->entries[i] = db->entries[db->count - 1];
-      db->count--;
-      return;
-    }
-  }
-}
 
 DB *db_create() {
   DB *db = malloc(sizeof(DB));
 
+  db->storage = storage_create();
   db->ht = ht_create(1024);
   db->tree = bst_create();
-
-  db->capacity = 16;
-  db->count = 0;
-  db->entries = malloc(db->capacity * sizeof(Entry *));
 
   return db;
 }
@@ -55,10 +27,8 @@ void db_free(DB *db) {
   ht_free(db->ht);
   bst_free(db->tree);
 
-  for (int i = 0; i < db->count; i++)
-    free(db->entries[i]);
+  storage_free(db->storage);
 
-  free(db->entries);
   free(db);
 }
 
@@ -71,12 +41,7 @@ void db_insert(DB *db, int key, int value) {
     return;
   }
 
-  entry = malloc(sizeof(Entry));
-
-  entry->key = key;
-  entry->value = value;
-
-  add_entry(db, entry);
+  entry = storage_create_entry(db->storage, key, value);
 
   ht_insert(db->ht, entry);
   bst_insert(db->tree, entry);
@@ -105,9 +70,7 @@ void db_delete(DB *db, int key) {
   ht_delete(db->ht, key);
   bst_delete(db->tree, key);
 
-  remove_entry(db, entry);
-
-  free(entry);
+  storage_delete_entry(db->storage, entry);
 }
 
 void db_range(DB *db, int a, int b) { bst_range(db->tree, a, b); }
