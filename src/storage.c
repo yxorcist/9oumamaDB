@@ -43,8 +43,15 @@ Entry *storage_create_entry(Storage *storage, int key, int value) {
 void storage_delete_entry(Storage *storage, Entry *entry) {
   for (int i = 0; i < storage->count; i++) {
     if (storage->entries[i] == entry) {
-      storage->entries[i] = storage->entries[storage->count--];
+
       free(entry);
+
+      for (int j = i; j < storage->count - 1; j++) {
+        storage->entries[j] = storage->entries[j + 1];
+      }
+
+      storage->count--;
+      storage->entries[storage->count] = NULL;
       return;
     }
   }
