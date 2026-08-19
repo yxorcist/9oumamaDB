@@ -1,73 +1,9 @@
 #include <stdio.h>
-#include <string.h>
 
 #include "db.h"
+#include "parser.h"
 
 #define MAX_LINE 256
-
-static void execute_command(DB *db, char *line) {
-  char cmd[32];
-
-  if (sscanf(line, "%31s", cmd) != 1)
-    return;
-
-  if (strcmp(cmd, "INSERT") == 0) {
-    int key, value;
-
-    if (sscanf(line, "%*s %d %d", &key, &value) != 2) {
-      printf("ERROR: invalid INSERT\n");
-      return;
-    }
-
-    db_insert(db, key, value);
-  }
-
-  else if (strcmp(cmd, "GET") == 0) {
-    int key, found;
-
-    if (sscanf(line, "%*s %d", &key) != 1) {
-      printf("ERROR: invalid GET\n");
-      return;
-    }
-
-    int value = db_get(db, key, &found);
-
-    if (found)
-      printf("%d\n", value);
-    else
-      printf("NOT_FOUND\n");
-  }
-
-  else if (strcmp(cmd, "DELETE") == 0) {
-    int key;
-
-    if (sscanf(line, "%*s %d", &key) != 1) {
-      printf("ERROR: invalid DELETE\n");
-      return;
-    }
-
-    db_delete(db, key);
-  }
-
-  else if (strcmp(cmd, "RANGE") == 0) {
-    int a, b;
-
-    if (sscanf(line, "%*s %d %d", &a, &b) != 2) {
-      printf("ERROR: invalid RANGE\n");
-      return;
-    }
-
-    db_range(db, a, b);
-  }
-
-  else if (strcmp(cmd, "EXIT") == 0) {
-    return;
-  }
-
-  else {
-    printf("ERROR: unknown command\n");
-  }
-}
 
 int main(int argc, char **argv) {
 
@@ -93,21 +29,47 @@ int main(int argc, char **argv) {
   }
 
   char line[MAX_LINE];
+  Command command;
 
   while (fgets(line, sizeof(line), input)) {
 
-    if (strcmp(line, "\n") == 0)
+    if (!parse_command(line, &command)) {
+      printf("ERROR: invalid command\n");
       continue;
+    }
 
-    char cmd[32];
-
-    if (sscanf(line, "%31s", cmd) != 1)
-      continue;
-
-    if (strcmp(cmd, "EXIT") == 0)
+    if (command.type == CMD_EXIT)
       break;
 
-    execute_command(db, line);
+    switch (command.type) {
+
+    case CMD_INSERT:
+      db_insert(db, command.key, command.value);
+      break;
+
+    case CMD_GET: {
+      int found;
+      int value = db_get(db, command.key, &found);
+
+      if (found)
+        printf("%d\n", value);
+      else
+        printf("NOT_FOUND\n");
+
+      break;
+    }
+
+    case CMD_DELETE:
+      db_delete(db, command.key);
+      break;
+
+    case CMD_RANGE:
+      db_range(db, command.a, command.b);
+      break;
+
+    default:
+      break;
+    }
   }
 
   if (input != stdin)
