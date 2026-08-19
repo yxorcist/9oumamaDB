@@ -72,6 +72,7 @@ static void execute_command(DB *db, char *line) {
 int main(int argc, char **argv) {
 
   DB *db = db_create();
+  db_load(db, "database.db");
 
   FILE *input = stdin;
 
@@ -112,6 +113,7 @@ int main(int argc, char **argv) {
   if (input != stdin)
     fclose(input);
 
+  db_save(db, "database.db");
   db_free(db);
 
   return 0;

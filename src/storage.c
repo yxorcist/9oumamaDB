@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "storage.h"
@@ -55,4 +56,66 @@ void storage_free(Storage *storage) {
 
   free(storage->entries);
   free(storage);
+}
+
+int storage_save(Storage *storage, const char *filename) {
+  FILE *file = fopen(filename, "wb");
+
+  if (!file)
+    return 0;
+
+  if (fwrite(&storage->count, sizeof(int), 1, file) != 1) {
+    fclose(file);
+    return 0;
+  }
+
+  for (int i = 0; i < storage->count; i++) {
+    Entry *entry = storage->entries[i];
+
+    if (fwrite(entry, sizeof(Entry), 1, file) != 1) {
+      fclose(file);
+      return 0;
+    }
+  }
+
+  fclose(file);
+  return 1;
+}
+
+int storage_load(Storage *storage, const char *filename) {
+  FILE *file = fopen(filename, "rb");
+
+  if (!file)
+    return 0;
+
+  int count;
+
+  if (fread(&count, sizeof(int), 1, file) != 1) {
+    fclose(file);
+    return 0;
+  }
+
+  for (int i = 0; i < count; i++) {
+    Entry entry;
+
+    if (fread(&entry, sizeof(entry), 1, file) != 1) {
+      fclose(file);
+      return 0;
+    }
+
+    storage_create_entry(storage, entry.key, entry.value);
+  }
+
+  fclose(file);
+
+  return 1;
+}
+
+int storage_count(Storage *storage) { return storage->count; }
+
+Entry *storage_get(Storage *storage, int index) {
+  if (index < 0 || index >= storage->count)
+    return NULL;
+
+  return storage->entries[index];
 }

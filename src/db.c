@@ -74,3 +74,23 @@ void db_delete(DB *db, int key) {
 }
 
 void db_range(DB *db, int a, int b) { bst_range(db->tree, a, b); }
+
+int db_save(DB *db, const char *filename) {
+  return storage_save(db->storage, filename);
+}
+
+int db_load(DB *db, const char *filename) {
+  if (!storage_load(db->storage, filename))
+    return 0;
+
+  int count = storage_count(db->storage);
+
+  for (int i = 0; i < count; i++) {
+    Entry *entry = storage_get(db->storage, i);
+
+    ht_insert(db->ht, entry);
+    bst_insert(db->tree, entry);
+  }
+
+  return 1;
+}
