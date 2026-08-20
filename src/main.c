@@ -59,6 +59,10 @@ int main(int argc, char **argv) {
       break;
     }
 
+    case CMD_UPDATE:
+      db_update(db, command.key, command.value);
+      break;
+
     case CMD_DELETE:
       db_delete(db, command.key);
       break;

@@ -73,6 +73,15 @@ void db_delete(DB *db, int key) {
   storage_delete_entry(db->storage, entry);
 }
 
+void db_update(DB *db, int key, int value) {
+  Entry *entry = ht_get(db->ht, key);
+
+  if (!entry)
+    return;
+
+  entry->value = value;
+}
+
 void db_range(DB *db, int a, int b) { bst_range(db->tree, a, b); }
 
 int db_save(DB *db, const char *filename) {

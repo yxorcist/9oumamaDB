@@ -4,6 +4,7 @@
 typedef enum {
   CMD_INSERT,
   CMD_GET,
+  CMD_UPDATE,
   CMD_DELETE,
   CMD_RANGE,
   CMD_EXIT,

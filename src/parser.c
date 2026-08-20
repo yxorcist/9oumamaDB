@@ -25,6 +25,13 @@ int parse_command(const char *line, Command *command) {
     return 1;
   }
 
+  if (strcmp(name, "UPDATE") == 0) {
+    if (sscanf(line, "%*s %d %d", &command->key, &command->value) != 2)
+      return 0;
+    command->type = CMD_UPDATE;
+    return 1;
+  }
+
   if (strcmp(name, "DELETE") == 0) {
     if (sscanf(line, "%*s %d", &command->key) != 1)
       return 0;
