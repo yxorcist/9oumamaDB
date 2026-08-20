@@ -12,6 +12,7 @@ void db_delete(DB *db, int key);
 void db_update(DB *db, int key, int value);
 
 void db_range(DB *db, int a, int b);
+int db_count(DB *db);
 
 int db_save(DB *db, const char *filename);
 int db_load(DB *db, const char *filename);

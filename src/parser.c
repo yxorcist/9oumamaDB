@@ -32,6 +32,11 @@ int parse_command(const char *line, Command *command) {
     return 1;
   }
 
+  if (strcmp(name, "COUNT") == 0) {
+    command->type = CMD_COUNT;
+    return 1;
+  }
+
   if (strcmp(name, "DELETE") == 0) {
     if (sscanf(line, "%*s %d", &command->key) != 1)
       return 0;

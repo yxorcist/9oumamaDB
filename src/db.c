@@ -84,6 +84,8 @@ void db_update(DB *db, int key, int value) {
 
 void db_range(DB *db, int a, int b) { bst_range(db->tree, a, b); }
 
+int db_count(DB *db) { return storage_count(db->storage); }
+
 int db_save(DB *db, const char *filename) {
   return storage_save(db->storage, filename);
 }

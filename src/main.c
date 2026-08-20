@@ -71,6 +71,10 @@ int main(int argc, char **argv) {
       db_range(db, command.a, command.b);
       break;
 
+    case CMD_COUNT:
+      printf("%d\n", db_count(db));
+      break;
+
     default:
       break;
     }

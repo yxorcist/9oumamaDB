@@ -7,6 +7,7 @@ typedef enum {
   CMD_UPDATE,
   CMD_DELETE,
   CMD_RANGE,
+  CMD_COUNT,
   CMD_EXIT,
   CMD_INVALID
 } CommandType;
