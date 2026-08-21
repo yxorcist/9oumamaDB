@@ -135,6 +135,12 @@ int storage_load(Storage *storage, const char *filename) {
   return 1;
 }
 
+void storage_clear(Storage *storage) {
+  for (int i = 0; i < storage->count; i++)
+    free(storage->entries[i]);
+  storage->count = 0;
+}
+
 int storage_count(Storage *storage) { return storage->count; }
 
 Entry *storage_get(Storage *storage, int index) {

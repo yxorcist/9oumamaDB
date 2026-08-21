@@ -75,6 +75,16 @@ int main(int argc, char **argv) {
       printf("%d\n", db_count(db));
       break;
 
+    case CMD_SAVE:
+      if (!db_save(db, "database.db"))
+        printf("ERROR: could not save database\n");
+      break;
+
+    case CMD_LOAD:
+      if (!db_load(db, "database.db"))
+        printf("ERROR: could not load database\n");
+      break;
+
     default:
       break;
     }

@@ -11,6 +11,8 @@ int db_get(DB *db, int key, int *found);
 void db_delete(DB *db, int key);
 void db_update(DB *db, int key, int value);
 
+void db_clear(DB *db);
+
 void db_range(DB *db, int a, int b);
 int db_count(DB *db);
 

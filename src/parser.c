@@ -35,17 +35,17 @@ int parse_command(const char *line, Command *command) {
     return 1;
   }
 
-  if (strcmp(name, "COUNT") == 0) {
-    if (sscanf(line, "%31s %31s", name, extra) != 1)
-      return 0;
-    command->type = CMD_COUNT;
-    return 1;
-  }
-
   if (strcmp(name, "DELETE") == 0) {
     if (sscanf(line, "%31s %d %31s", name, &command->key, extra) != 2)
       return 0;
     command->type = CMD_DELETE;
+    return 1;
+  }
+
+  if (strcmp(name, "COUNT") == 0) {
+    if (sscanf(line, "%31s %31s", name, extra) != 1)
+      return 0;
+    command->type = CMD_COUNT;
     return 1;
   }
 
@@ -54,6 +54,20 @@ int parse_command(const char *line, Command *command) {
                extra) != 3)
       return 0;
     command->type = CMD_RANGE;
+    return 1;
+  }
+
+  if (strcmp(name, "SAVE") == 0) {
+    if (sscanf(line, "%31s %31s", name, extra) != 1)
+      return 0;
+    command->type = CMD_SAVE;
+    return 1;
+  }
+
+  if (strcmp(name, "LOAD") == 0) {
+    if (sscanf(line, "%31s %31s", name, extra) != 1)
+      return 0;
+    command->type = CMD_LOAD;
     return 1;
   }
 

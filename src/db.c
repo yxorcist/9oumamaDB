@@ -82,6 +82,16 @@ void db_update(DB *db, int key, int value) {
   entry->value = value;
 }
 
+void db_clear(DB *db) {
+  storage_clear(db->storage);
+
+  ht_free(db->ht);
+  bst_free(db->tree);
+
+  db->ht = ht_create(1024);
+  db->tree = bst_create();
+}
+
 void db_range(DB *db, int a, int b) { bst_range(db->tree, a, b); }
 
 int db_count(DB *db) { return storage_count(db->storage); }
@@ -91,6 +101,8 @@ int db_save(DB *db, const char *filename) {
 }
 
 int db_load(DB *db, const char *filename) {
+  db_clear(db);
+
   if (!storage_load(db->storage, filename))
     return 0;
 
