@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "buffer_pool.h"
+#include "page_manager.h"
 
 /*
 
