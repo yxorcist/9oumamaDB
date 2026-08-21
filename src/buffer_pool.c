@@ -116,7 +116,7 @@ Page *buffer_pool_get(BufferPool *pool, int page_id) {
   frame->dirty = 0;
   frame->last_used = pool->clock++;
 
-  return NULL;
+  return &frame->page;
 }
 
 void buffer_pool_mark_dirty(BufferPool *pool, int page_id) {
