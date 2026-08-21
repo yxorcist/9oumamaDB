@@ -71,6 +71,13 @@ int parse_command(const char *line, Command *command) {
     return 1;
   }
 
+  if (strcmp(name, "CLEAR") == 0) {
+    if (sscanf(line, "%31s %31s", name, extra) != 1)
+      return 0;
+    command->type = CMD_CLEAR;
+    return 1;
+  }
+
   if (strcmp(name, "EXIT") == 0) {
     if (sscanf(line, "%31s %31s", name, extra) != 1)
       return 0;

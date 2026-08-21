@@ -85,6 +85,10 @@ int main(int argc, char **argv) {
         printf("ERROR: could not load database\n");
       break;
 
+    case CMD_CLEAR:
+      db_clear(db);
+      break;
+
     default:
       break;
     }

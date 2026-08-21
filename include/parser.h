@@ -10,6 +10,7 @@ typedef enum {
   CMD_COUNT,
   CMD_SAVE,
   CMD_LOAD,
+  CMD_CLEAR,
   CMD_EXIT,
   CMD_INVALID
 } CommandType;
