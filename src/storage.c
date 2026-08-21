@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "storage.h"
+#include "storage_format.h"
 
 struct Storage {
   Entry **entries;
@@ -71,7 +72,13 @@ int storage_save(Storage *storage, const char *filename) {
   if (!file)
     return 0;
 
-  if (fwrite(&storage->count, sizeof(int), 1, file) != 1) {
+  DatabaseHeader header;
+
+  header.magic = DB_MAGIC;
+  header.version = DB_VERSION;
+  header.count = storage->count;
+
+  if (fwrite(&header, sizeof(DatabaseHeader), 1, file) != 1) {
     fclose(file);
     return 0;
   }
@@ -95,14 +102,24 @@ int storage_load(Storage *storage, const char *filename) {
   if (!file)
     return 0;
 
-  int count;
+  DatabaseHeader header;
 
-  if (fread(&count, sizeof(int), 1, file) != 1) {
+  if (fread(&header, sizeof(DatabaseHeader), 1, file) != 1) {
     fclose(file);
     return 0;
   }
 
-  for (int i = 0; i < count; i++) {
+  if (header.magic != DB_MAGIC) {
+    fclose(file);
+    return 0;
+  }
+
+  if (header.version != DB_VERSION) {
+    fclose(file);
+    return 0;
+  }
+
+  for (int i = 0; i < header.count; i++) {
     Entry entry;
 
     if (fread(&entry, sizeof(entry), 1, file) != 1) {
