@@ -10,7 +10,8 @@ gcc -Wall -Wextra -Iinclude \
 src/page_manager.c          \
 src/buffer_pool.c           \
 tests/test_buffer_pool.c    \
--o test_buffer_pool
+-o test_buffer_pool         \
+&& ./test_buffer_pool
 
 */
 
@@ -57,30 +58,78 @@ int main(void) {
   }
 
   /*
-   * Fill all three frames
+   * TEST 1: Load Pages
    */
   Page *p0 = buffer_pool_get(pool, 0);
   Page *p1 = buffer_pool_get(pool, 1);
   Page *p2 = buffer_pool_get(pool, 2);
+
+  if (!p0 || !p1 || !p2) {
+    printf("failed to load pages\n");
+    buffer_pool_free(pool);
+    page_manager_free(manager);
+    return 1;
+  }
 
   printf("%s\n", p0->data);
   printf("%s\n", p1->data);
   printf("%s\n", p2->data);
 
   /*
-   * Access page 0 again
-   * this makes page 1 the least recently used
+   * TEST2: Cache hit
    */
-  buffer_pool_get(pool, 0);
+  Page *cached = buffer_pool_get(pool, 0);
+
+  if (!cached) {
+    printf("cache hit failed\n");
+    buffer_pool_free(pool);
+    page_manager_free(manager);
+    return 1;
+  }
+
+  printf("cache hit: %s\n", cached->data);
 
   /*
-   * request page 3
-   * page 1 should be evicted
+   * TEST 3: Modify page 0
+   */
+  strcpy((char *)p0->data, "MODIFIED PAGE 0");
+  buffer_pool_mark_dirty(pool, 0);
+
+  /*
+   * TEST 4: Make page 0 LRU
+   */
+  buffer_pool_get(pool, 1);
+  buffer_pool_get(pool, 2);
+
+  /*
+   * TEST 5: Force eviction
    */
   Page *p3 = buffer_pool_get(pool, 3);
 
-  printf("%s\n", p3->data);
+  if (!p3) {
+    printf("failed to load page 3\n");
+    buffer_pool_free(pool);
+    page_manager_free(manager);
+    return 1;
+  }
 
+  printf("loaded: %s\n", p3->data);
+
+  /*
+   * TEST 6: Reload page 0
+   */
+  Page *reloaded = buffer_pool_get(pool, 0);
+
+  if (!reloaded) {
+    printf("failed to reload page 0\n");
+    buffer_pool_free(pool);
+    page_manager_free(manager);
+    return 1;
+  }
+
+  printf("reloaded: %s\n", reloaded->data);
+
+  /* CLEANUP */
   buffer_pool_free(pool);
   page_manager_free(manager);
 
