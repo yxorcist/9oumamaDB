@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -139,7 +138,6 @@ int storage_save(Storage *storage) {
 
   if (!storage)
     return 0;
-  fprintf(stderr, "SAVE: storage->count = %d\n", storage->count);
 
   /* page 0 contains metadata */
   Page *metadata_page = buffer_pool_get(storage->buffer_pool, 0);
@@ -162,7 +160,6 @@ int storage_save(Storage *storage) {
 
   DatabaseHeader header = {
       .magic = DB_MAGIC, .version = DB_VERSION, .count = storage->count};
-  fprintf(stderr, "SAVE: header.count = %d\n", header.count);
 
   memcpy(metadata_page->data, &header, sizeof(DatabaseHeader));
 
