@@ -19,4 +19,7 @@ int storage_load(Storage *storage);
 int storage_count(Storage *storage);
 Entry *storage_get_entry(Storage *storage, int index);
 
+int storage_allocate_page(Storage *storage);
+int storage_free_page(Storage *storage, int page_id);
+
 #endif

@@ -1,25 +1,71 @@
-/*
-
- gcc -Wall -Wextra -std=c11 -Iinclude -g \
-    src/hash_table.c \
-    src/bst.c \
-    src/db.c \
-    src/storage.c \
-    src/buffer_pool.c \
-    src/page_manager.c \
-    tests/test_db.c \
-    -o test_db \
-    && ./test_db
-
-*/
-
 #include <assert.h>
 #include <stdio.h>
 
 #include "db.h"
+#include "entry.h"
+
+static void cleanup() { remove("database.db"); }
+
+static void test_page_reclamation(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  int per_page = 4096 / sizeof(Entry);
+
+  /*
+   * Fill two pages.
+   */
+  for (int i = 0; i < per_page + 1; i++)
+    db_insert(db, i, i * 10);
+
+  assert(db_count(db) == per_page + 1);
+  assert(db_save(db) == 1);
+
+  /*
+   * Remove the entry that occupies the second page.
+   */
+  db_delete(db, per_page);
+
+  assert(db_count(db) == per_page);
+  assert(db_save(db) == 1);
+
+  /*
+   * Verify the remaining data survives a reload.
+   */
+  db_free(db);
+
+  db = db_create();
+  assert(db != NULL);
+
+  assert(db_load(db) == 1);
+  assert(db_count(db) == per_page);
+
+  for (int i = 0; i < per_page; i++) {
+    int found;
+    int value = db_get(db, i, &found);
+
+    assert(found);
+    assert(value == i * 10);
+  }
+
+  /*
+   * The reclaimed page should be available for reuse.
+   *
+   * DB itself doesn't expose page allocation, so the
+   * persistence/data-integrity portion is what we verify
+   * at the DB layer.
+   */
+
+  db_free(db);
+  cleanup();
+
+  printf("PASS: DB page reclamation\n");
+}
 
 static void test_crud(void) {
-  remove("database.db");
+  cleanup();
 
   DB *db = db_create();
   assert(db != NULL);
@@ -60,7 +106,7 @@ static void test_crud(void) {
 
 static void test_persistence(void) {
 
-  remove("database.db");
+  cleanup();
 
   DB *db = db_create();
   assert(db != NULL);
@@ -102,7 +148,7 @@ static void test_persistence(void) {
 
 static void test_delete_persistence(void) {
 
-  remove("database.db");
+  cleanup();
 
   DB *db = db_create();
   assert(db != NULL);
@@ -144,8 +190,9 @@ int main(void) {
   test_crud();
   test_persistence();
   test_delete_persistence();
+  test_page_reclamation();
 
-  remove("database.db");
+  cleanup();
 
   printf("\nAll DB tests passed.\n");
 

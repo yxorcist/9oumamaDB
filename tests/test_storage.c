@@ -1,15 +1,3 @@
-/*
-
-gcc -Wall -Wextra -std=c11 -Iinclude -g \
-    src/storage.c \
-    src/buffer_pool.c \
-    src/page_manager.c \
-    tests/test_storage.c \
-    -o test_storage \
-    && ./test_storage
-
-*/
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +7,118 @@ gcc -Wall -Wextra -std=c11 -Iinclude -g \
 #define TEST_FILE "test_database.db"
 
 static void cleanup(void) { remove(TEST_FILE); }
+
+static void test_page_reclamation(void) {
+  cleanup();
+
+  Storage *storage = storage_create();
+  assert(storage != NULL);
+
+  /*
+   * One page holds many entries, so create enough entries
+   * to require at least two pages.
+   */
+  int per_page = 4096 / sizeof(Entry);
+
+  for (int i = 0; i < per_page + 1; i++)
+    assert(storage_create_entry(storage, i, i * 10) != NULL);
+
+  assert(storage_save(storage) == 1);
+
+  /*
+   * Delete everything that belongs to the second page.
+   */
+  while (storage_count(storage) > per_page) {
+    Entry *entry = storage_get_entry(storage, per_page);
+    assert(entry != NULL);
+    storage_delete_entry(storage, entry);
+  }
+
+  assert(storage_count(storage) == per_page);
+  assert(storage_save(storage) == 1);
+
+  /*
+   * Page 2 should now be free.
+   * Reallocation should reuse it.
+   */
+  int page_id = storage_allocate_page(storage);
+  assert(page_id == 2);
+
+  storage_free(storage);
+  cleanup();
+
+  printf("PASS: page reclamation\n");
+}
+
+static void test_page_reuse_persistence(void) {
+  cleanup();
+
+  Storage *storage = storage_create();
+  assert(storage != NULL);
+
+  int page_a = storage_allocate_page(storage);
+  int page_b = storage_allocate_page(storage);
+
+  assert(page_a > 0);
+  assert(page_b > 0);
+  assert(page_a != page_b);
+
+  assert(storage_free_page(storage, page_a));
+
+  assert(storage_save(storage) == 1);
+
+  storage_free(storage);
+
+  storage = storage_create();
+  assert(storage != NULL);
+
+  assert(storage_load(storage) == 1);
+
+  int reused_page = storage_allocate_page(storage);
+
+  assert(reused_page == page_a);
+
+  storage_free(storage);
+
+  cleanup();
+
+  printf("PASS: page reuse persistence\n");
+}
+
+static void test_page_reuse(void) {
+  remove("test_storage.db");
+
+  Storage *storage = storage_create();
+  assert(storage != NULL);
+
+  /*
+   * Allocate two pages.
+   */
+  int page_a = storage_allocate_page(storage);
+  int page_b = storage_allocate_page(storage);
+
+  assert(page_a > 0);
+  assert(page_b > 0);
+  assert(page_a != page_b);
+
+  /*
+   * Free page_a.
+   */
+  assert(storage_free_page(storage, page_a));
+
+  /*
+   * The next allocation should reuse page_a.
+   */
+  int reused_page = storage_allocate_page(storage);
+
+  assert(reused_page == page_a);
+
+  storage_free(storage);
+
+  remove("test_storage.db");
+
+  printf("PASS: page reuse\n");
+}
 
 static void test_empty_database(void) {
   cleanup();
@@ -215,6 +315,9 @@ int main(void) {
   test_update_persistence();
   test_delete_persistence();
   test_multiple_pages();
+  test_page_reuse();
+  test_page_reuse_persistence();
+  test_page_reclamation();
 
   printf("\nAll storage tests passed.\n");
 

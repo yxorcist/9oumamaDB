@@ -13,6 +13,10 @@ struct Storage {
 
   PageManager *page_manager;
   BufferPool *buffer_pool;
+
+  int free_page_head;
+  int page_count;
+  int active_page_count;
 };
 
 static int entries_per_page(void) { return PAGE_SIZE / sizeof(Entry); }
@@ -57,6 +61,10 @@ Storage *storage_create(void) {
 
   storage->page_manager = page_manager_create("database.db");
 
+  storage->free_page_head = NO_FREE_PAGE;
+  storage->page_count = 0;
+  storage->active_page_count = 0;
+
   if (!storage->page_manager) {
     free(storage->entries);
     free(storage);
@@ -71,6 +79,8 @@ Storage *storage_create(void) {
     free(storage);
     return NULL;
   }
+
+  storage->free_page_head = NO_FREE_PAGE;
 
   return storage;
 }
@@ -156,19 +166,36 @@ int storage_save(Storage *storage) {
       return 0;
   }
 
+  int per_page = entries_per_page();
+  int page_count = page_count_for_entries(storage->count);
+
+  if (page_count < storage->active_page_count) {
+    for (int page_id = page_count + 1; page_id <= storage->active_page_count;
+         page_id++) {
+      if (!storage_free_page(storage, page_id))
+        return 0;
+    }
+  }
+
+  storage->active_page_count = page_count;
+
+  if (storage->page_count < page_count)
+    storage->page_count = page_count;
+
+  DatabaseHeader header = {.magic = DB_MAGIC,
+                           .version = DB_VERSION,
+                           .count = storage->count,
+                           .free_page_head = storage->free_page_head,
+                           .page_count = storage->page_count};
+
   memset(metadata_page->data, 0, PAGE_SIZE);
-
-  DatabaseHeader header = {
-      .magic = DB_MAGIC, .version = DB_VERSION, .count = storage->count};
-
   memcpy(metadata_page->data, &header, sizeof(DatabaseHeader));
 
   buffer_pool_mark_dirty(storage->buffer_pool, 0);
 
-  /* page 1..N contain entries */
-  int per_page = entries_per_page();
-  int page_count = page_count_for_entries(storage->count);
+  storage->page_count = page_count;
 
+  /* page 1..N contain entries */
   for (int page_id = 0; page_id < page_count; page_id++) {
 
     Page *page = buffer_pool_get(storage->buffer_pool, page_id + 1);
@@ -213,6 +240,8 @@ int storage_load(Storage *storage) {
 
   if (!page_manager_page_exists(storage->page_manager, 0)) {
     storage->count = 0;
+    storage->free_page_head = NO_FREE_PAGE;
+    storage->page_count = 0;
     return 1;
   }
 
@@ -226,7 +255,7 @@ int storage_load(Storage *storage) {
 
   memcpy(&header, metadata_page->data, sizeof(DatabaseHeader));
 
-  /* existing database: validate format */
+  /* validate database file format */
   if (header.magic != DB_MAGIC)
     return 0;
 
@@ -238,6 +267,25 @@ int storage_load(Storage *storage) {
   if (entry_count < 0)
     return 0;
 
+  if (header.page_count < 0)
+    return 0;
+
+  storage->free_page_head = header.free_page_head;
+  storage->page_count = header.page_count;
+
+  int required_pages = page_count_for_entries(entry_count);
+
+  if (storage->page_count < required_pages)
+    return 0;
+
+  storage->active_page_count = required_pages;
+
+  if (header.page_count < required_pages)
+    return 0;
+
+  storage->free_page_head = header.free_page_head;
+  storage->page_count = header.page_count;
+
   /* verify if storage has enough capacity */
   while (storage->capacity < entry_count) {
     if (!grow(storage))
@@ -247,7 +295,7 @@ int storage_load(Storage *storage) {
   int per_page = entries_per_page();
   int page_count = page_count_for_entries(entry_count);
 
-  /* read every entry page */
+  /* load entries */
   for (int page_id = 0; page_id < page_count; page_id++) {
 
     Page *page = buffer_pool_get(storage->buffer_pool, page_id + 1);
@@ -318,4 +366,58 @@ Entry *storage_get_entry(Storage *storage, int index) {
     return NULL;
 
   return storage->entries[index];
+}
+
+int storage_allocate_page(Storage *storage) {
+  if (!storage)
+    return -1;
+
+  /* Reuse a page from the free-page list */
+  if (storage->free_page_head != NO_FREE_PAGE) {
+    int page_id = storage->free_page_head;
+
+    Page *page = buffer_pool_get(storage->buffer_pool, page_id);
+
+    if (!page)
+      return -1;
+
+    FreePage free_page;
+
+    memcpy(&free_page, page->data, sizeof(FreePage));
+
+    storage->free_page_head = free_page.next_free_page;
+
+    return page_id;
+  }
+
+  /* No free pages available */
+  int page_id = storage->page_count + 1;
+
+  if (!buffer_pool_new_page(storage->buffer_pool, page_id))
+    return -1;
+
+  storage->page_count++;
+
+  return page_id;
+}
+
+int storage_free_page(Storage *storage, int page_id) {
+  if (!storage || page_id <= 0)
+    return 0;
+
+  Page *page = buffer_pool_get(storage->buffer_pool, page_id);
+
+  if (!page)
+    return 0;
+
+  FreePage free_page = {.next_free_page = storage->free_page_head};
+
+  memset(page->data, 0, PAGE_SIZE);
+  memcpy(page->data, &free_page, sizeof(FreePage));
+
+  storage->free_page_head = page_id;
+
+  buffer_pool_mark_dirty(storage->buffer_pool, page_id);
+
+  return 1;
 }

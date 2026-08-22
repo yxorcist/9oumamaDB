@@ -1,14 +1,3 @@
-/*
-
-gcc -Wall -Wextra -std=c11 -Iinclude -g \
-    src/page_manager.c \
-    src/buffer_pool.c \
-    tests/test_buffer_pool.c \
-    -o test_buffer_pool \
-    && ./test_buffer_pool
-
-*/
-
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
