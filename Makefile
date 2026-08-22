@@ -42,11 +42,18 @@ test:
 		tests/test_storage.c \
 		-o test_storage
 
+	gcc -Wall -Wextra -std=c11 -Iinclude -g \
+    src/heap.c \
+    tests/test_heap.c \
+    -o test_heap \
+    && ./test_heap
+
 	./test_page_manager
 	./test_buffer_pool
 	./test_storage
 	./test_db
+	./test_heap
 
 clean:
 	rm -rf build
-	rm -f test_page_manager test_buffer_pool test_storage test_db
+	rm -f test_page_manager test_buffer_pool test_storage test_db test_heap *.db
