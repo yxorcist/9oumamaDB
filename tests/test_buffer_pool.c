@@ -1,137 +1,82 @@
+/*
+
+gcc -Wall -Wextra -std=c11 -Iinclude -g \
+    src/page_manager.c \
+    src/buffer_pool.c \
+    tests/test_buffer_pool.c \
+    -o test_buffer_pool \
+    && ./test_buffer_pool
+
+*/
+
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "buffer_pool.h"
 #include "page_manager.h"
 
-/*
+#define TEST_FILE "test_buffer_pool.db"
 
-gcc -Wall -Wextra -Iinclude \
-src/page_manager.c          \
-src/buffer_pool.c           \
-tests/test_buffer_pool.c    \
--o test_buffer_pool         \
-&& ./test_buffer_pool
+static void test_lru_eviction(void) {
+  remove(TEST_FILE);
 
-*/
+  PageManager *manager = page_manager_create(TEST_FILE);
+  assert(manager != NULL);
 
-int main(void) {
-  const char *filename = "test_buffer.db";
-
-  PageManager *manager = page_manager_create(filename);
-
-  if (!manager) {
-    printf("failed to create page manager\n");
-    return 1;
-  }
-
-  /*
-   * Create some pages directly on disk
-   */
-  Page page;
-
-  memset(&page, 0, sizeof(Page));
-  strcpy((char *)page.data, "PAGE 0");
-  page_manager_write(manager, 0, &page);
-
-  memset(&page, 0, sizeof(Page));
-  strcpy((char *)page.data, "PAGE 1");
-  page_manager_write(manager, 1, &page);
-
-  memset(&page, 0, sizeof(Page));
-  strcpy((char *)page.data, "PAGE 2");
-  page_manager_write(manager, 2, &page);
-
-  memset(&page, 0, sizeof(Page));
-  strcpy((char *)page.data, "PAGE 3");
-  page_manager_write(manager, 3, &page);
-
-  /*
-   * Create the buffer pool
-   */
   BufferPool *pool = buffer_pool_create(manager);
+  assert(pool != NULL);
 
-  if (!pool) {
-    printf("failed to create pool\n");
-    page_manager_free(manager);
-    return 1;
+  /*
+   * The pool has 16 frames.
+   * Create 20 pages so eviction is guaranteed.
+   */
+  for (int page_id = 0; page_id < 20; page_id++) {
+    assert(buffer_pool_new_page(pool, page_id));
+
+    Page *page = buffer_pool_get(pool, page_id);
+    assert(page != NULL);
+
+    memset(page->data, 0, PAGE_SIZE);
+
+    memcpy(page->data, &page_id, sizeof(page_id));
+
+    buffer_pool_mark_dirty(pool, page_id);
   }
 
   /*
-   * TEST 1: Load Pages
+   * Flush everything currently cached.
    */
-  Page *p0 = buffer_pool_get(pool, 0);
-  Page *p1 = buffer_pool_get(pool, 1);
-  Page *p2 = buffer_pool_get(pool, 2);
+  assert(buffer_pool_flush(pool));
 
-  if (!p0 || !p1 || !p2) {
-    printf("failed to load pages\n");
-    buffer_pool_free(pool);
-    page_manager_free(manager);
-    return 1;
+  /*
+   * Every page must exist on disk, including pages
+   * that were evicted earlier.
+   */
+  for (int page_id = 0; page_id < 20; page_id++) {
+    Page page;
+
+    assert(page_manager_read(manager, page_id, &page));
+
+    int stored_id;
+
+    memcpy(&stored_id, page.data, sizeof(stored_id));
+
+    assert(stored_id == page_id);
   }
 
-  printf("%s\n", p0->data);
-  printf("%s\n", p1->data);
-  printf("%s\n", p2->data);
-
-  /*
-   * TEST2: Cache hit
-   */
-  Page *cached = buffer_pool_get(pool, 0);
-
-  if (!cached) {
-    printf("cache hit failed\n");
-    buffer_pool_free(pool);
-    page_manager_free(manager);
-    return 1;
-  }
-
-  printf("cache hit: %s\n", cached->data);
-
-  /*
-   * TEST 3: Modify page 0
-   */
-  strcpy((char *)p0->data, "MODIFIED PAGE 0");
-  buffer_pool_mark_dirty(pool, 0);
-
-  /*
-   * TEST 4: Make page 0 LRU
-   */
-  buffer_pool_get(pool, 1);
-  buffer_pool_get(pool, 2);
-
-  /*
-   * TEST 5: Force eviction
-   */
-  Page *p3 = buffer_pool_get(pool, 3);
-
-  if (!p3) {
-    printf("failed to load page 3\n");
-    buffer_pool_free(pool);
-    page_manager_free(manager);
-    return 1;
-  }
-
-  printf("loaded: %s\n", p3->data);
-
-  /*
-   * TEST 6: Reload page 0
-   */
-  Page *reloaded = buffer_pool_get(pool, 0);
-
-  if (!reloaded) {
-    printf("failed to reload page 0\n");
-    buffer_pool_free(pool);
-    page_manager_free(manager);
-    return 1;
-  }
-
-  printf("reloaded: %s\n", reloaded->data);
-
-  /* CLEANUP */
   buffer_pool_free(pool);
   page_manager_free(manager);
+
+  remove(TEST_FILE);
+
+  printf("PASS: LRU eviction\n");
+}
+
+int main(void) {
+  test_lru_eviction();
+
+  printf("\nAll buffer pool tests passed.\n");
 
   return 0;
 }
