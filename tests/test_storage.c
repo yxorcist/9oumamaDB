@@ -5,7 +5,8 @@ gcc -Wall -Wextra -std=c11 -Iinclude -g \
     src/buffer_pool.c \
     src/page_manager.c \
     tests/test_storage.c \
-    -o test_storage
+    -o test_storage \
+    && ./test_storage
 
 */
 
@@ -170,11 +171,50 @@ static void test_delete_persistence(void) {
   printf("PASS: delete persistence\n");
 }
 
+static void test_multiple_pages(void) {
+  cleanup();
+
+  Storage *storage = storage_create();
+  assert(storage != NULL);
+
+  const int count = 1000;
+
+  for (int i = 0; i < count; i++) {
+    assert(storage_create_entry(storage, i, i * 10) != NULL);
+  }
+
+  assert(storage_count(storage) == count);
+  assert(storage_save(storage) == 1);
+
+  storage_free(storage);
+
+  storage = storage_create();
+  assert(storage != NULL);
+
+  assert(storage_load(storage) == 1);
+  assert(storage_count(storage) == count);
+
+  for (int i = 0; i < count; i++) {
+    Entry *entry = storage_get_entry(storage, i);
+
+    assert(entry != NULL);
+    assert(entry->key == i);
+    assert(entry->value == i * 10);
+  }
+
+  storage_free(storage);
+
+  cleanup();
+
+  printf("PASS: multiple pages\n");
+}
+
 int main(void) {
   test_empty_database();
   test_save_load();
   test_update_persistence();
   test_delete_persistence();
+  test_multiple_pages();
 
   printf("\nAll storage tests passed.\n");
 
