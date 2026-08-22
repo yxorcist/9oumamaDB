@@ -13,5 +13,40 @@ $(OUT): $(SRC)
 run: all
 	./$(OUT)
 
+test:
+	gcc $(CFLAGS) \
+		src/page_manager.c \
+		tests/test_page_manager.c \
+		-o test_page_manager
+
+	gcc $(CFLAGS) \
+		src/buffer_pool.c \
+		src/page_manager.c \
+		tests/test_buffer_pool.c \
+		-o test_buffer_pool
+
+	gcc $(CFLAGS) \
+		src/hash_table.c \
+		src/bst.c \
+		src/db.c \
+		src/storage.c \
+		src/buffer_pool.c \
+		src/page_manager.c \
+		tests/test_db.c \
+		-o test_db
+
+	gcc $(CFLAGS) \
+		src/storage.c \
+		src/buffer_pool.c \
+		src/page_manager.c \
+		tests/test_storage.c \
+		-o test_storage
+
+	./test_page_manager
+	./test_buffer_pool
+	./test_storage
+	./test_db
+
 clean:
-	rm -rf $(OUT)
+	rm -rf build
+	rm -f test_page_manager test_buffer_pool test_storage test_db
