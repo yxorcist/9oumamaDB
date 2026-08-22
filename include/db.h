@@ -16,7 +16,7 @@ void db_clear(DB *db);
 void db_range(DB *db, int a, int b);
 int db_count(DB *db);
 
-int db_save(DB *db, const char *filename);
-int db_load(DB *db, const char *filename);
+int db_save(DB *db);
+int db_load(DB *db);
 
 #endif

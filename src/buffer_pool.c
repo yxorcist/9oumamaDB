@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "buffer_pool.h"
 
@@ -117,6 +118,59 @@ Page *buffer_pool_get(BufferPool *pool, int page_id) {
   frame->last_used = pool->clock++;
 
   return &frame->page;
+}
+
+int buffer_pool_new_page(BufferPool *pool, int page_id) {
+  if (!pool || page_id < 0)
+    return 0;
+
+  /* don't create a page that's already cached */
+  for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
+    Frame *frame = &pool->frames[i];
+
+    if (frame->valid && frame->page_id == page_id)
+      return 0;
+  }
+
+  /* Find an unused frame */
+  for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
+    Frame *frame = &pool->frames[i];
+
+    if (!frame->valid) {
+      memset(frame->page.data, 0, PAGE_SIZE);
+      frame->page_id = page_id;
+      frame->valid = 1;
+      frame->dirty = 1;
+      frame->last_used = pool->clock++;
+
+      return 1;
+    }
+  }
+
+  /* Pool is full, resuse lru frame */
+  int lru_index = 0;
+  for (int i = 1; i < BUFFER_POOL_SIZE; i++) {
+    if (pool->frames[i].last_used < pool->frames[lru_index].last_used) {
+      lru_index = i;
+    }
+  }
+
+  Frame *frame = &pool->frames[lru_index];
+
+  if (frame->dirty) {
+    if (!page_manager_write(pool->manager, frame->page_id, &frame->page)) {
+      return 0;
+    }
+  }
+
+  memset(frame->page.data, 0, PAGE_SIZE);
+
+  frame->page_id = page_id;
+  frame->valid = 1;
+  frame->dirty = 1;
+  frame->last_used = pool->clock++;
+
+  return 1;
 }
 
 void buffer_pool_mark_dirty(BufferPool *pool, int page_id) {

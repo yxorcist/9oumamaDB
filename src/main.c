@@ -8,7 +8,8 @@
 int main(int argc, char **argv) {
 
   DB *db = db_create();
-  db_load(db, "database.db");
+  if (!db)
+    return 1;
 
   FILE *input = stdin;
 
@@ -76,12 +77,12 @@ int main(int argc, char **argv) {
       break;
 
     case CMD_SAVE:
-      if (!db_save(db, "database.db"))
+      if (!db_save(db))
         printf("ERROR: could not save database\n");
       break;
 
     case CMD_LOAD:
-      if (!db_load(db, "database.db"))
+      if (!db_load(db))
         printf("ERROR: could not load database\n");
       break;
 
@@ -97,7 +98,9 @@ int main(int argc, char **argv) {
   if (input != stdin)
     fclose(input);
 
-  db_save(db, "database.db");
+  if (!db_save(db))
+    fprintf(stderr, "ERROR: failed to save database\n");
+
   db_free(db);
 
   return 0;

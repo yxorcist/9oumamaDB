@@ -11,4 +11,6 @@ void page_manager_free(PageManager *manager);
 int page_manager_write(PageManager *manager, int page_id, Page *page);
 int page_manager_read(PageManager *manager, int page_id, Page *page);
 
+int page_manager_page_exists(PageManager *manager, int page_id);
+
 #endif

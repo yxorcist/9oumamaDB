@@ -12,28 +12,63 @@ struct DB {
   BST *tree;
 };
 
+static int db_rebuild_indexes(DB *db) {
+  int count = storage_count(db->storage);
+
+  for (int i = 0; i < count; i++) {
+    Entry *entry = storage_get_entry(db->storage, i);
+
+    if (!entry)
+      return 0;
+
+    ht_insert(db->ht, entry);
+    bst_insert(db->tree, entry);
+  }
+
+  return 1;
+}
+
 DB *db_create() {
   DB *db = malloc(sizeof(DB));
+
+  if (!db)
+    return NULL;
 
   db->storage = storage_create();
   db->ht = ht_create(1024);
   db->tree = bst_create();
+
+  if (!db->storage || !db->ht || !db->tree) {
+    db_free(db);
+    return NULL;
+  }
+
+  if (!storage_load(db->storage)) {
+    db_free(db);
+    return NULL;
+  }
+
+  if (!db_rebuild_indexes(db)) {
+    db_free(db);
+    return NULL;
+  }
 
   return db;
 }
 
 void db_free(DB *db) {
 
+  if (!db)
+    return;
+
   ht_free(db->ht);
   bst_free(db->tree);
-
   storage_free(db->storage);
 
   free(db);
 }
 
 void db_insert(DB *db, int key, int value) {
-
   Entry *entry = ht_get(db->ht, key);
 
   if (entry) {
@@ -42,6 +77,9 @@ void db_insert(DB *db, int key, int value) {
   }
 
   entry = storage_create_entry(db->storage, key, value);
+
+  if (!entry)
+    return;
 
   ht_insert(db->ht, entry);
   bst_insert(db->tree, entry);
@@ -96,24 +134,13 @@ void db_range(DB *db, int a, int b) { bst_range(db->tree, a, b); }
 
 int db_count(DB *db) { return storage_count(db->storage); }
 
-int db_save(DB *db, const char *filename) {
-  return storage_save(db->storage, filename);
-}
+int db_save(DB *db) { return storage_save(db->storage); }
 
-int db_load(DB *db, const char *filename) {
+int db_load(DB *db) {
   db_clear(db);
 
-  if (!storage_load(db->storage, filename))
+  if (!storage_load(db->storage))
     return 0;
 
-  int count = storage_count(db->storage);
-
-  for (int i = 0; i < count; i++) {
-    Entry *entry = storage_get(db->storage, i);
-
-    ht_insert(db->ht, entry);
-    bst_insert(db->tree, entry);
-  }
-
-  return 1;
+  return db_rebuild_indexes(db);
 }
