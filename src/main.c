@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
       db_range(db, command.a, command.b);
       break;
 
-    case CMD_TOPK:
+    case CMD_TOPK: {
       int count = db_count(db);
 
       if (count == 0)
@@ -97,6 +97,7 @@ int main(int argc, char **argv) {
       free(results);
 
       break;
+    }
 
     case CMD_COUNT:
       printf("%d\n", db_count(db));

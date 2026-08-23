@@ -34,8 +34,7 @@ test:
     src/buffer_pool.c \
     src/page_manager.c \
     tests/test_db.c \
-    -o test_db \
-    && ./test_db
+    -o test_db
 
 	gcc $(CFLAGS) \
 		src/storage.c \
@@ -44,18 +43,23 @@ test:
 		tests/test_storage.c \
 		-o test_storage
 
-	gcc -Wall -Wextra -std=c11 -Iinclude -g \
+	gcc $(CFLAGS) \
     src/heap.c \
     tests/test_heap.c \
-    -o test_heap \
-    && ./test_heap
+    -o test_heap
+
+	gcc $(CFLAGS) \
+    src/parser.c \
+    tests/test_parser.c \
+    -o test_parser
 
 	./test_page_manager
 	./test_buffer_pool
 	./test_storage
 	./test_db
 	./test_heap
+	./test_parser
 
 clean:
 	rm -rf build
-	rm -f test_page_manager test_buffer_pool test_storage test_db test_heap *.db
+	rm -f test_page_manager test_buffer_pool test_storage test_db test_heap test_parser *.db
