@@ -94,6 +94,44 @@ int heap_insert(Heap *heap, Entry *entry) {
   return 1;
 }
 
+int heap_remove(Heap *heap, Entry *entry) {
+  if (!heap || !entry)
+    return 0;
+
+  int index = -1;
+
+  for (int i = 0; i < heap->size; i++) {
+    if (heap->entries[i] == entry) {
+      index = i;
+      break;
+    }
+  }
+
+  if (index == -1)
+    return 0;
+
+  heap->size--;
+
+  if (index == heap->size)
+    return 1;
+
+  heap->entries[index] = heap->entries[heap->size];
+
+  /* replacement may need to move either direction */
+  if (index > 0) {
+    int parent = (index - 1) / 2;
+
+    if (heap->entries[index]->value > heap->entries[parent]->value) {
+      sift_up(heap, index);
+      return 1;
+    }
+  }
+
+  sift_down(heap, index);
+
+  return 1;
+}
+
 Entry *heap_peek(Heap *heap) {
   if (!heap || heap->size == 0)
     return NULL;

@@ -9,6 +9,7 @@ Heap *heap_create(int capacity);
 void heap_free(Heap *heap);
 
 int heap_insert(Heap *heap, Entry *entry);
+int heap_remove(Heap *heap, Entry *entry);
 Entry *heap_peek(Heap *heap);
 Entry *heap_extract_max(Heap *heap);
 

@@ -22,17 +22,28 @@ int main(void) {
 
   assert(heap_size(heap) == 5);
 
+  /* Remove the maximum */
   assert(heap_peek(heap) == &e);
+  assert(heap_remove(heap, &e));
+  assert(heap_size(heap) == 4);
+  assert(heap_peek(heap) == &b);
 
-  assert(heap_extract_max(heap) == &e);
+  /* Remove an element from the middle */
+  assert(heap_remove(heap, &d));
+  assert(heap_size(heap) == 3);
+  assert(heap_peek(heap) == &b);
+
+  /* Verify remaining ordering */
   assert(heap_extract_max(heap) == &b);
-  assert(heap_extract_max(heap) == &d);
   assert(heap_extract_max(heap) == &a);
   assert(heap_extract_max(heap) == &c);
 
   assert(heap_size(heap) == 0);
   assert(heap_extract_max(heap) == NULL);
   assert(heap_peek(heap) == NULL);
+
+  /* Removing an entry that isn't present must fail */
+  assert(!heap_remove(heap, &e));
 
   heap_free(heap);
 

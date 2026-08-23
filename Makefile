@@ -26,14 +26,16 @@ test:
 		-o test_buffer_pool
 
 	gcc $(CFLAGS) \
-		src/hash_table.c \
-		src/bst.c \
-		src/db.c \
-		src/storage.c \
-		src/buffer_pool.c \
-		src/page_manager.c \
-		tests/test_db.c \
-		-o test_db
+    src/hash_table.c \
+    src/bst.c \
+    src/heap.c \
+    src/db.c \
+    src/storage.c \
+    src/buffer_pool.c \
+    src/page_manager.c \
+    tests/test_db.c \
+    -o test_db \
+    && ./test_db
 
 	gcc $(CFLAGS) \
 		src/storage.c \

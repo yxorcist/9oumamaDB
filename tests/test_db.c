@@ -6,6 +6,48 @@
 
 static void cleanup() { remove("database.db"); }
 
+static void test_topk(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  db_insert(db, 1, 40);
+  db_insert(db, 2, 90);
+  db_insert(db, 3, 15);
+  db_insert(db, 4, 70);
+  db_insert(db, 5, 100);
+
+  Entry *results[3];
+
+  int count = db_topk(db, 3, results);
+
+  assert(count == 3);
+
+  assert(results[0]->key == 5);
+  assert(results[0]->value == 100);
+
+  assert(results[1]->key == 2);
+  assert(results[1]->value == 90);
+
+  assert(results[2]->key == 4);
+  assert(results[2]->value == 70);
+
+  /*
+   * TOPK must not modify the database.
+   */
+  assert(db_count(db) == 5);
+
+  int found;
+  assert(db_get(db, 5, &found) == 100);
+  assert(found);
+
+  db_free(db);
+  cleanup();
+
+  printf("PASS: DB TOPK\n");
+}
+
 static void test_page_reclamation(void) {
   cleanup();
 
@@ -191,6 +233,7 @@ int main(void) {
   test_persistence();
   test_delete_persistence();
   test_page_reclamation();
+  test_topk();
 
   cleanup();
 
