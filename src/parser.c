@@ -57,6 +57,15 @@ int parse_command(const char *line, Command *command) {
     return 1;
   }
 
+  if (strcmp(name, "TOPK") == 0) {
+    if (sscanf(line, "%31s %d %31s", name, &command->k, extra) != 2)
+      return 0;
+    if (command->key <= 0)
+      return 0;
+    command->type = CMD_TOPK;
+    return 1;
+  }
+
   if (strcmp(name, "SAVE") == 0) {
     if (sscanf(line, "%31s %31s", name, extra) != 1)
       return 0;

@@ -7,6 +7,7 @@ typedef enum {
   CMD_UPDATE,
   CMD_DELETE,
   CMD_RANGE,
+  CMD_TOPK,
   CMD_COUNT,
   CMD_SAVE,
   CMD_LOAD,
@@ -23,6 +24,8 @@ typedef struct {
 
   int a;
   int b;
+
+  int k;
 } Command;
 
 int parse_command(const char *line, Command *command);

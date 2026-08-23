@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "db.h"
 #include "parser.h"
@@ -70,6 +71,31 @@ int main(int argc, char **argv) {
 
     case CMD_RANGE:
       db_range(db, command.a, command.b);
+      break;
+
+    case CMD_TOPK:
+      int count = db_count(db);
+
+      if (count == 0)
+        break;
+
+      if (command.k > count)
+        command.k = count;
+
+      Entry **results = malloc(command.k * sizeof(Entry *));
+
+      if (!results) {
+        printf("ERROR: memory allocation failed\n");
+        break;
+      }
+
+      int result_count = db_topk(db, command.k, results);
+
+      for (int i = 0; i < result_count; i++)
+        printf("%d %d\n", results[i]->key, results[i]->value);
+
+      free(results);
+
       break;
 
     case CMD_COUNT:
