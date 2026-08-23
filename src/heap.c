@@ -74,6 +74,7 @@ void heap_free(Heap *heap) {
   if (!heap)
     return;
 
+  heap_clear(heap);
   free(heap->entries);
   free(heap);
 }
@@ -86,10 +87,9 @@ int heap_insert(Heap *heap, Entry *entry) {
     return 0;
 
   heap->entries[heap->size] = entry;
-
-  sift_up(heap, heap->size);
-
   heap->size++;
+
+  sift_up(heap, heap->size - 1);
 
   return 1;
 }
@@ -153,6 +153,13 @@ Entry *heap_extract_max(Heap *heap) {
   }
 
   return max;
+}
+
+void heap_clear(Heap *heap) {
+  if (!heap)
+    return;
+
+  heap->size = 0;
 }
 
 int heap_size(Heap *heap) {

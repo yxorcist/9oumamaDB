@@ -12,6 +12,9 @@ typedef enum {
   CMD_SAVE,
   CMD_LOAD,
   CMD_CLEAR,
+  CMD_BEGIN,
+  CMD_COMMIT,
+  CMD_ROLLBACK,
   CMD_EXIT,
   CMD_INVALID
 } CommandType;

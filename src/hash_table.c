@@ -103,3 +103,20 @@ void ht_delete(HashTable *ht, int key) {
     n = n->next;
   }
 }
+
+void ht_clear(HashTable *ht) {
+  if (!ht)
+    return;
+
+  for (int i = 0; i < ht->size; i++) {
+    Node *n = ht->buckets[i];
+
+    while (n) {
+      Node *tmp = n;
+      n = n->next;
+      free(tmp);
+    }
+
+    ht->buckets[i] = NULL;
+  }
+}

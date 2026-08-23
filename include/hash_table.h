@@ -11,5 +11,6 @@ void ht_free(HashTable *ht);
 void ht_insert(HashTable *ht, Entry *entry);
 Entry *ht_get(HashTable *ht, int key);
 void ht_delete(HashTable *ht, int key);
+void ht_clear(HashTable *ht);
 
 #endif

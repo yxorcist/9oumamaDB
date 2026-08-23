@@ -6,6 +6,62 @@
 
 static void cleanup() { remove("database.db"); }
 
+static void test_transaction_rollback(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  db_insert(db, 1, 100);
+  db_insert(db, 2, 200);
+
+  assert(db_begin(db));
+
+  db_update(db, 1, 999);
+  db_delete(db, 2);
+  db_insert(db, 3, 300);
+
+  assert(db_count(db) == 2);
+
+  assert(db_rollback(db));
+
+  assert(db_count(db) == 2);
+
+  int found;
+
+  assert(db_get(db, 1, &found) == 100);
+  assert(found);
+
+  assert(db_get(db, 2, &found) == 200);
+  assert(found);
+
+  assert(db_get(db, 3, &found) == 0);
+  assert(!found);
+
+  db_free(db);
+  cleanup();
+
+  printf("PASS: DB transaction rollback\n");
+}
+
+static void test_transactions(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  assert(db_begin(db));
+  assert(!db_begin(db));
+
+  assert(db_commit(db));
+  assert(!db_commit(db));
+
+  db_free(db);
+  cleanup();
+
+  printf("PASS: DB transactions\n");
+}
+
 static void test_topk(void) {
   cleanup();
 
@@ -234,6 +290,8 @@ int main(void) {
   test_delete_persistence();
   test_page_reclamation();
   test_topk();
+  test_transactions();
+  test_transaction_rollback();
 
   cleanup();
 

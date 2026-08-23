@@ -23,4 +23,8 @@ int db_count(DB *db);
 int db_save(DB *db);
 int db_load(DB *db);
 
+int db_begin(DB *db);
+int db_commit(DB *db);
+int db_rollback(DB *db);
+
 #endif

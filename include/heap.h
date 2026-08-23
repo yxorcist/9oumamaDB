@@ -12,6 +12,7 @@ int heap_insert(Heap *heap, Entry *entry);
 int heap_remove(Heap *heap, Entry *entry);
 Entry *heap_peek(Heap *heap);
 Entry *heap_extract_max(Heap *heap);
+void heap_clear(Heap *heap);
 
 int heap_size(Heap *heap);
 

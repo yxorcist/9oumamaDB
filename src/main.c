@@ -117,6 +117,21 @@ int main(int argc, char **argv) {
       db_clear(db);
       break;
 
+    case CMD_BEGIN:
+      if (!db_begin(db))
+        printf("ERROR: could not begin transaction\n");
+      break;
+
+    case CMD_COMMIT:
+      if (!db_commit(db))
+        printf("ERROR: could not commit transaction\n");
+      break;
+
+    case CMD_ROLLBACK:
+      if (!db_rollback(db))
+        printf("ERROR: could not rollback transaction\n");
+      break;
+
     default:
       break;
     }

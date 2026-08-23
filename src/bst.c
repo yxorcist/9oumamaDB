@@ -133,3 +133,11 @@ static Node *delete_rec(Node *root, int key) {
 void bst_delete(BST *tree, int key) {
   tree->root = delete_rec(tree->root, key);
 }
+
+void bst_clear(BST *tree) {
+  if (!tree)
+    return;
+
+  free_rec(tree->root);
+  tree->root = NULL;
+}

@@ -11,5 +11,6 @@ void bst_free(BST *tree);
 void bst_insert(BST *tree, Entry *entry);
 void bst_delete(BST *tree, int key);
 void bst_range(BST *tree, int a, int b);
+void bst_clear(BST *tree);
 
 #endif
