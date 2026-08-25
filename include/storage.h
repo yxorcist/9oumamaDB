@@ -22,4 +22,7 @@ Entry *storage_get_entry(Storage *storage, int index);
 int storage_allocate_page(Storage *storage);
 int storage_free_page(Storage *storage, int page_id);
 
+void storage_discard_pages(Storage *storage);
+void storage_set_writes_enabled(Storage *storage, int enabled);
+
 #endif

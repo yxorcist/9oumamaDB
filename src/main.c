@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
   if (input != stdin)
     fclose(input);
 
-  if (!db_save(db))
+  if (!db_in_transaction(db) && !db_save(db))
     fprintf(stderr, "ERROR: failed to save database\n");
 
   db_free(db);

@@ -43,6 +43,19 @@ static int db_rebuild_indexes(DB *db) {
   return 1;
 }
 
+static void transaction_clear(DB *db) {
+  if (!db)
+    return;
+
+  for (int i = 0; i < db->transaction_count; i++)
+    free(db->transaction_entries[i]);
+
+  free(db->transaction_entries);
+
+  db->transaction_entries = NULL;
+  db->transaction_count = 0;
+}
+
 DB *db_create() {
   DB *db = malloc(sizeof(DB));
 
@@ -77,6 +90,12 @@ void db_free(DB *db) {
 
   if (!db)
     return;
+
+  if (db->in_transaction) {
+    storage_discard_pages(db->storage);
+    storage_set_writes_enabled(db->storage, 1);
+    // transaction_clear(db);
+  }
 
   ht_free(db->ht);
   bst_free(db->tree);
@@ -144,13 +163,14 @@ void db_update(DB *db, int key, int value) {
 }
 
 void db_clear(DB *db) {
+  if (!db)
+    return;
+
   storage_clear(db->storage);
 
-  ht_free(db->ht);
-  bst_free(db->tree);
-
-  db->ht = ht_create(1024);
-  db->tree = bst_create();
+  ht_clear(db->ht);
+  bst_clear(db->tree);
+  heap_clear(db->heap);
 }
 
 int db_topk(DB *db, int k, Entry **results) {
@@ -199,7 +219,18 @@ void db_range(DB *db, int a, int b) { bst_range(db->tree, a, b); }
 
 int db_count(DB *db) { return storage_count(db->storage); }
 
-int db_save(DB *db) { return storage_save(db->storage); }
+static int db_persist(DB *db) {
+  if (!db)
+    return 0;
+  return storage_save(db->storage);
+}
+
+int db_save(DB *db) {
+  if (!db || db->in_transaction)
+    return 0;
+
+  return db_persist(db);
+}
 
 int db_load(DB *db) {
   db_clear(db);
@@ -208,19 +239,6 @@ int db_load(DB *db) {
     return 0;
 
   return db_rebuild_indexes(db);
-}
-
-static void transaction_clear(DB *db) {
-  if (!db)
-    return;
-
-  for (int i = 0; i < db->transaction_count; i++)
-    free(db->transaction_entries[i]);
-
-  free(db->transaction_entries);
-
-  db->transaction_entries = NULL;
-  db->transaction_count = 0;
 }
 
 int db_begin(DB *db) {
@@ -254,6 +272,8 @@ int db_begin(DB *db) {
     }
   }
 
+  storage_set_writes_enabled(db->storage, 0);
+
   db->transaction_entries = snapshot;
   db->transaction_count = count;
   db->in_transaction = 1;
@@ -265,8 +285,12 @@ int db_commit(DB *db) {
   if (!db || !db->in_transaction)
     return 0;
 
-  if (!db_save(db))
+  storage_set_writes_enabled(db->storage, 1);
+
+  if (!db_persist(db)) {
+    storage_set_writes_enabled(db->storage, 0);
     return 0;
+  }
 
   transaction_clear(db);
   db->in_transaction = 0;
@@ -287,6 +311,10 @@ int db_rollback(DB *db) {
       return 0;
   }
 
+  storage_discard_pages(db->storage);
+
+  storage_set_writes_enabled(db->storage, 1);
+
   if (!db_rebuild_indexes(db))
     return 0;
 
@@ -295,3 +323,5 @@ int db_rollback(DB *db) {
 
   return 1;
 }
+
+int db_in_transaction(DB *db) { return db && db->in_transaction; }

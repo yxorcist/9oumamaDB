@@ -27,4 +27,6 @@ int db_begin(DB *db);
 int db_commit(DB *db);
 int db_rollback(DB *db);
 
+int db_in_transaction(DB *db);
+
 #endif

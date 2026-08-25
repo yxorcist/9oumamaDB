@@ -421,3 +421,17 @@ int storage_free_page(Storage *storage, int page_id) {
 
   return 1;
 }
+
+void storage_discard_pages(Storage *storage) {
+  if (!storage)
+    return;
+
+  buffer_pool_discard(storage->buffer_pool);
+}
+
+void storage_set_writes_enabled(Storage *storage, int enabled) {
+  if (!storage)
+    return;
+
+  buffer_pool_set_writes_enabled(storage->buffer_pool, enabled);
+}

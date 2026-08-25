@@ -6,6 +6,48 @@
 
 static void cleanup() { remove("database.db"); }
 
+static void test_transaction_exit_without_commit(void) {
+  cleanup();
+
+  /* Create and persist initial state. */
+  DB *db = db_create();
+  assert(db != NULL);
+
+  db_insert(db, 1, 100);
+  assert(db_save(db) == 1);
+
+  db_free(db);
+
+  /* Modify inside a transaction, then destroy DB without committing. */
+  db = db_create();
+  assert(db != NULL);
+
+  assert(db_begin(db) == 1);
+
+  db_update(db, 1, 999);
+
+  int found;
+  assert(db_get(db, 1, &found) == 999);
+  assert(found);
+
+  db_free(db);
+
+  /* Reopen: the uncommitted value must not be on disk. */
+  db = db_create();
+  assert(db != NULL);
+
+  int value = db_get(db, 1, &found);
+
+  assert(found);
+  assert(value == 100);
+
+  db_free(db);
+
+  printf("PASS: transaction exit without commit\n");
+
+  remove("database.db");
+}
+
 static void test_transaction_rollback(void) {
   cleanup();
 
@@ -292,6 +334,7 @@ int main(void) {
   test_topk();
   test_transactions();
   test_transaction_rollback();
+  test_transaction_exit_without_commit();
 
   cleanup();
 

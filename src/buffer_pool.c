@@ -15,6 +15,7 @@ struct BufferPool {
   PageManager *manager;
   Frame frames[BUFFER_POOL_SIZE];
   unsigned long clock;
+  int writes_enabled;
 };
 
 BufferPool *buffer_pool_create(PageManager *manager) {
@@ -28,6 +29,7 @@ BufferPool *buffer_pool_create(PageManager *manager) {
 
   pool->manager = manager;
   pool->clock = 0;
+  pool->writes_enabled = 0;
 
   for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
     pool->frames[i].page_id = -1;
@@ -101,6 +103,9 @@ Page *buffer_pool_get(BufferPool *pool, int page_id) {
    * write it back before replacing it
    */
   if (frame->dirty) {
+    if (!pool->writes_enabled)
+      return NULL;
+
     if (!page_manager_write(pool->manager, frame->page_id, &frame->page))
       return NULL;
   }
@@ -207,4 +212,25 @@ int buffer_pool_flush(BufferPool *pool) {
   }
 
   return 1;
+}
+
+void buffer_pool_discard(BufferPool *pool) {
+  if (!pool)
+    return;
+
+  for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
+    pool->frames[i].page_id = -1;
+    pool->frames[i].valid = 0;
+    pool->frames[i].dirty = 0;
+    pool->frames[i].last_used = 0;
+  }
+
+  pool->clock = 0;
+}
+
+void buffer_pool_set_writes_enabled(BufferPool *pool, int enabled) {
+  if (!pool)
+    return;
+
+  pool->writes_enabled = enabled;
 }
