@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -Iinclude -g
+CFLAGS = -Wall -Wextra -std=c11 -Iinclude -pthread -g
 
 SRC = $(shell find src -name '*.c')
 OUT = build/9oumamaDB
@@ -53,13 +53,26 @@ test:
     tests/test_parser.c \
     -o test_parser
 
+	gcc $(CFLAGS) \
+    src/hash_table.c \
+    src/bst.c \
+    src/heap.c \
+    src/db.c \
+    src/storage.c \
+    src/buffer_pool.c \
+    src/page_manager.c \
+    tests/test_concurrency.c \
+    -o test_concurrency \
+
 	./test_page_manager
 	./test_buffer_pool
 	./test_storage
 	./test_db
 	./test_heap
 	./test_parser
+	./test_concurrency
 
 clean:
 	rm -rf build
-	rm -f test_page_manager test_buffer_pool test_storage test_db test_heap test_parser *.db
+	rm -f test_page_manager test_buffer_pool test_storage \
+	test_db test_heap test_parser test_concurrency *.db

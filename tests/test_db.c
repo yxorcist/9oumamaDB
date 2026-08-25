@@ -116,20 +116,20 @@ static void test_topk(void) {
   db_insert(db, 4, 70);
   db_insert(db, 5, 100);
 
-  Entry *results[3];
+  Entry results[3];
 
   int count = db_topk(db, 3, results);
 
   assert(count == 3);
 
-  assert(results[0]->key == 5);
-  assert(results[0]->value == 100);
+  assert(results[0].key == 5);
+  assert(results[0].value == 100);
 
-  assert(results[1]->key == 2);
-  assert(results[1]->value == 90);
+  assert(results[1].key == 2);
+  assert(results[1].value == 90);
 
-  assert(results[2]->key == 4);
-  assert(results[2]->value == 70);
+  assert(results[2].key == 4);
+  assert(results[2].value == 70);
 
   /*
    * TOPK must not modify the database.
