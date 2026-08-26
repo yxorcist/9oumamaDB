@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
       if (command.k > count)
         command.k = count;
 
-      Entry **results = malloc(command.k * sizeof(Entry *));
+      Entry *results = malloc(command.k * sizeof(Entry *));
 
       if (!results) {
         printf("ERROR: memory allocation failed\n");
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
       int result_count = db_topk(db, command.k, results);
 
       for (int i = 0; i < result_count; i++)
-        printf("%d %d\n", results[i]->key, results[i]->value);
+        printf("%d %d\n", results[i].key, results[i].value);
 
       free(results);
 

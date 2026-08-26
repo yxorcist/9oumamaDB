@@ -2,6 +2,7 @@
 #define DB_H
 
 #include "entry.h"
+#include "request_queue.h"
 
 typedef struct DB DB;
 
@@ -28,5 +29,7 @@ int db_commit(DB *db);
 int db_rollback(DB *db);
 
 int db_in_transaction(DB *db);
+
+int db_execute_request(DB *db, Request *request);
 
 #endif

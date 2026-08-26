@@ -454,3 +454,62 @@ int db_rollback(DB *db) {
 
   return 1;
 }
+
+int db_execute_request(DB *db, Request *request) {
+
+  if (!db || !request)
+    return 0;
+
+  switch (request->type) {
+
+  case CMD_INSERT:
+    db_insert(db, request->key, request->value);
+    request->result = 1;
+    break;
+
+  case CMD_GET:
+    request->result = db_get(db, request->key, &request->found);
+    break;
+
+  case CMD_UPDATE:
+    db_update(db, request->key, request->value);
+    request->result = 1;
+    break;
+
+  case CMD_DELETE:
+    db_delete(db, request->key);
+    request->result = 1;
+    break;
+
+  case CMD_SAVE:
+    request->result = db_save(db);
+    break;
+
+  case CMD_LOAD:
+    request->result = db_load(db);
+    break;
+
+  case CMD_CLEAR:
+    db_clear(db);
+    request->result = 1;
+    break;
+
+  case CMD_BEGIN:
+    request->result = db_begin(db);
+    break;
+
+  case CMD_COMMIT:
+    request->result = db_commit(db);
+    break;
+
+  case CMD_ROLLBACK:
+    request->result = db_rollback(db);
+    break;
+
+  default:
+    request->result = 0;
+    break;
+  }
+
+  return 1;
+}

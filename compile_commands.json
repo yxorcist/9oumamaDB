@@ -1,5 +1,124 @@
 [
   {
+    "file": "src/page_manager.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/page_manager.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/hash_table.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/hash_table.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/bst.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/bst.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/heap.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/heap.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/parser.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/parser.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/buffer_pool.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/buffer_pool.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/storage.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/storage.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
     "file": "src/main.c",
     "arguments": [
       "/usr/bin/gcc",
@@ -7,6 +126,8 @@
       "-Wextra",
       "-std=c11",
       "-Iinclude",
+      "-pthread",
+      "-g",
       "src/main.c",
       "-o",
       "build/9oumamaDB"
@@ -22,7 +143,26 @@
       "-Wextra",
       "-std=c11",
       "-Iinclude",
+      "-pthread",
+      "-g",
       "src/db.c",
+      "-o",
+      "build/9oumamaDB"
+    ],
+    "directory": "/home/xorcist/Projects/9oumamaDB",
+    "output": "build/9oumamaDB"
+  },
+  {
+    "file": "src/request_queue.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c11",
+      "-Iinclude",
+      "-pthread",
+      "-g",
+      "src/request_queue.c",
       "-o",
       "build/9oumamaDB"
     ],

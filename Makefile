@@ -62,7 +62,25 @@ test:
     src/buffer_pool.c \
     src/page_manager.c \
     tests/test_concurrency.c \
-    -o test_concurrency \
+    -o test_concurrency
+
+	gcc $(CFLAGS) -pthread \
+    src/request_queue.c \
+    tests/test_request_queue.c \
+    -o test_request_queue
+
+	gcc $(CFLAGS) -pthread \
+    src/request_queue.c \
+    src/worker_pool.c \
+    src/db.c \
+    src/storage.c \
+    src/page_manager.c \
+		src/buffer_pool.c \
+    src/hash_table.c \
+    src/bst.c \
+    src/heap.c \
+    tests/test_worker_pool.c \
+    -o test_worker_pool
 
 	./test_page_manager
 	./test_buffer_pool
@@ -71,8 +89,11 @@ test:
 	./test_heap
 	./test_parser
 	./test_concurrency
+	./test_request_queue
+	./test_worker_pool
 
 clean:
 	rm -rf build
 	rm -f test_page_manager test_buffer_pool test_storage \
-	test_db test_heap test_parser test_concurrency *.db
+	test_db test_heap test_parser test_concurrency *.db \
+	test_request_queue test_worker_pool
