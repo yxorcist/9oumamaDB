@@ -133,25 +133,24 @@ void db_free(DB *db) {
   free(db);
 }
 
-void db_insert(DB *db, int key, int value) {
+int db_insert(DB *db, int key, int value) {
   if (!db)
-    return;
+    return 0;
 
   pthread_mutex_lock(&db->mutex);
 
   Entry *entry = ht_get(db->ht, key);
 
   if (entry) {
-    entry->value = value;
     pthread_mutex_unlock(&db->mutex);
-    return;
+    return 0;
   }
 
   entry = storage_create_entry(db->storage, key, value);
 
   if (!entry) {
     pthread_mutex_unlock(&db->mutex);
-    return;
+    return 0;
   }
 
   ht_insert(db->ht, entry);
@@ -159,6 +158,8 @@ void db_insert(DB *db, int key, int value) {
   heap_insert(db->heap, entry);
 
   pthread_mutex_unlock(&db->mutex);
+
+  return 1;
 }
 
 int db_get(DB *db, int key, int *found) {
@@ -184,10 +185,10 @@ int db_get(DB *db, int key, int *found) {
   return value;
 }
 
-void db_delete(DB *db, int key) {
+int db_delete(DB *db, int key) {
 
   if (!db)
-    return;
+    return 0;
 
   pthread_mutex_lock(&db->mutex);
 
@@ -195,7 +196,7 @@ void db_delete(DB *db, int key) {
 
   if (!entry) {
     pthread_mutex_unlock(&db->mutex);
-    return;
+    return 0;
   }
 
   ht_delete(db->ht, key);
@@ -204,21 +205,29 @@ void db_delete(DB *db, int key) {
   storage_delete_entry(db->storage, entry);
 
   pthread_mutex_unlock(&db->mutex);
+
+  return 1;
 }
 
-void db_update(DB *db, int key, int value) {
+int db_update(DB *db, int key, int value) {
 
   if (!db)
-    return;
+    return 0;
 
   pthread_mutex_lock(&db->mutex);
 
   Entry *entry = ht_get(db->ht, key);
 
-  if (entry)
-    entry->value = value;
+  if (!entry) {
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  entry->value = value;
 
   pthread_mutex_unlock(&db->mutex);
+
+  return 1;
 }
 
 void db_clear(DB *db) {
@@ -463,8 +472,7 @@ int db_execute_request(DB *db, Request *request) {
   switch (request->type) {
 
   case CMD_INSERT:
-    db_insert(db, request->key, request->value);
-    request->result = 1;
+    request->result = db_insert(db, request->key, request->value);
     break;
 
   case CMD_GET:
@@ -472,13 +480,11 @@ int db_execute_request(DB *db, Request *request) {
     break;
 
   case CMD_UPDATE:
-    db_update(db, request->key, request->value);
-    request->result = 1;
+    request->result = db_update(db, request->key, request->value);
     break;
 
   case CMD_DELETE:
-    db_delete(db, request->key);
-    request->result = 1;
+    request->result = db_delete(db, request->key);
     break;
 
   case CMD_SAVE:
@@ -510,6 +516,8 @@ int db_execute_request(DB *db, Request *request) {
     request->result = 0;
     break;
   }
+
+  request_complete(request);
 
   return 1;
 }

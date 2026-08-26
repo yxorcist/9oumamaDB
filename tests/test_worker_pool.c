@@ -4,6 +4,63 @@
 #include "db.h"
 #include "worker_pool.h"
 
+static void test_worker_pool_failures(void) {
+  DB *db = db_create();
+  assert(db != NULL);
+
+  WorkerPool *pool = worker_pool_create(db, 4, 16);
+  assert(pool != NULL);
+
+  /* UPDATE nonexistent key → failure */
+  Request update;
+  assert(request_init(&update, CMD_UPDATE, 999, 100));
+  assert(worker_pool_submit(pool, &update));
+
+  request_wait(&update);
+
+  assert(!update.result);
+
+  request_destroy(&update);
+
+  /* DELETE nonexistent key → failure */
+  Request delete;
+  assert(request_init(&delete, CMD_DELETE, 999, 0));
+  assert(worker_pool_submit(pool, &delete));
+
+  request_wait(&delete);
+
+  assert(!delete.result);
+
+  request_destroy(&delete);
+
+  /* First INSERT → success */
+  Request insert;
+  assert(request_init(&insert, CMD_INSERT, 1, 100));
+  assert(worker_pool_submit(pool, &insert));
+
+  request_wait(&insert);
+
+  assert(insert.result);
+
+  request_destroy(&insert);
+
+  /* Duplicate INSERT → failure */
+  Request duplicate;
+  assert(request_init(&duplicate, CMD_INSERT, 1, 200));
+  assert(worker_pool_submit(pool, &duplicate));
+
+  request_wait(&duplicate);
+
+  assert(!duplicate.result);
+
+  request_destroy(&duplicate);
+
+  worker_pool_free(pool);
+  db_free(db);
+
+  printf("PASS: worker pool failure handling\n");
+}
+
 static void test_worker_pool_concurrent(void) {
   DB *db = db_create();
   assert(db != NULL);
@@ -154,6 +211,7 @@ int main(void) {
   test_worker_pool();
   test_worker_pool_operations();
   test_worker_pool_concurrent();
+  test_worker_pool_failures();
 
   return 0;
 }

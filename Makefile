@@ -33,6 +33,7 @@ test:
     src/storage.c \
     src/buffer_pool.c \
     src/page_manager.c \
+		src/request_queue.c \
     tests/test_db.c \
     -o test_db
 
@@ -61,6 +62,7 @@ test:
     src/storage.c \
     src/buffer_pool.c \
     src/page_manager.c \
+		src/request_queue.c \
     tests/test_concurrency.c \
     -o test_concurrency
 
