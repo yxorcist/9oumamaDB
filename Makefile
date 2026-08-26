@@ -89,6 +89,11 @@ test:
     tests/test_http_server.c \
     -o test_http_server
 
+	gcc -Wall -Wextra -std=c11 -Iinclude -g \
+    src/http_connection.c \
+    tests/test_http_connection.c \
+    -o test_http_connection
+
 	./test_page_manager
 	./test_buffer_pool
 	./test_storage
@@ -99,10 +104,12 @@ test:
 	./test_request_queue
 	./test_worker_pool
 	./test_http_server
+	./test_http_connection
 
 clean:
 	rm -rf build
 	rm -f test_page_manager test_buffer_pool test_storage \
 	test_db test_heap test_parser test_concurrency *.db \
-	test_request_queue test_worker_pool test_http_server
+	test_request_queue test_worker_pool test_http_server \
+	test_http_connection
 
