@@ -524,7 +524,5 @@ int db_execute_request(DB *db, Request *request) {
     break;
   }
 
-  request_complete(request);
-
   return 1;
 }

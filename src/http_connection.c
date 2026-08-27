@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "http_connection.h"
 #include "http_dispatch.h"
+#include "http_response.h"
 
 #define HTTP_REQUEST_MAX 8192
 
@@ -58,14 +60,10 @@ int http_connection_write(HTTPConnection *connection, const char *data,
   return result == (ssize_t)length;
 }
 
-void http_connection_handle(
-    WorkerPool *pool,
-    int client_fd) {
-
+void http_connection_handle(WorkerPool *pool, int client_fd) {
   char buffer[HTTP_REQUEST_MAX];
 
-  ssize_t bytes_read =
-      read(client_fd, buffer, sizeof(buffer) - 1);
+  ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
 
   if (bytes_read <= 0) {
     close(client_fd);
@@ -83,9 +81,7 @@ void http_connection_handle(
 
   Request request;
 
-  if (!http_request_to_db_request(
-          &http_request,
-          &request)) {
+  if (!http_request_to_db_request(&http_request, &request)) {
     close(client_fd);
     return;
   }
@@ -98,7 +94,36 @@ void http_connection_handle(
 
   request_wait(&request);
 
-  request_destroy(&request);
+  char response_body[256];
 
+  int status_code;
+
+  if (request.type == CMD_GET) {
+    if (request.found) {
+      snprintf(response_body, sizeof(response_body),
+              "%d", request.result);
+      status_code = 200;
+    } else {
+      snprintf(response_body, sizeof(response_body),
+              "not found");
+      status_code = 404;
+    }
+  } else if (request.result) {
+    snprintf(response_body, sizeof(response_body), "OK");
+    status_code = 200;
+  } else {
+    snprintf(response_body, sizeof(response_body),
+            "operation failed");
+    status_code = 500;
+  }
+
+  char response[1024];
+
+  if (http_response_build(response, sizeof(response),
+                          status_code, response_body)) {
+    send(client_fd, response, strlen(response), 0);
+  }
+
+  request_destroy(&request);
   close(client_fd);
 }

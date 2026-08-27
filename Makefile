@@ -4,6 +4,42 @@ CFLAGS = -Wall -Wextra -std=c11 -Iinclude -pthread -g
 SRC = $(shell find src -name '*.c')
 OUT = build/9oumamaDB
 
+DB_SRC = \
+	src/hash_table.c \
+	src/bst.c \
+	src/heap.c \
+	src/db.c \
+	src/storage.c \
+	src/buffer_pool.c \
+	src/page_manager.c
+
+CONCURRENCY_SRC = \
+	src/request_queue.c \
+	src/worker_pool.c
+
+HTTP_SRC = \
+	src/http_server.c \
+	src/http_connection.c \
+	src/http_request.c \
+	src/http_response.c \
+	src/http_dispatch.c
+
+TESTS = \
+	test_page_manager \
+	test_buffer_pool \
+	test_storage \
+	test_db \
+	test_heap \
+	test_parser \
+	test_concurrency \
+	test_request_queue \
+	test_worker_pool \
+	test_http_server \
+	test_http_connection \
+	test_http_request \
+	test_http_dispatch \
+	test_http_response
+
 all: $(OUT)
 
 $(OUT): $(SRC)
@@ -13,122 +49,7 @@ $(OUT): $(SRC)
 run: all
 	./$(OUT)
 
-test:
-	gcc $(CFLAGS) \
-		src/page_manager.c \
-		tests/test_page_manager.c \
-		-o test_page_manager
-
-	gcc $(CFLAGS) \
-		src/buffer_pool.c \
-		src/page_manager.c \
-		tests/test_buffer_pool.c \
-		-o test_buffer_pool
-
-	gcc $(CFLAGS) \
-    src/hash_table.c \
-    src/bst.c \
-    src/heap.c \
-    src/db.c \
-    src/storage.c \
-    src/buffer_pool.c \
-    src/page_manager.c \
-		src/request_queue.c \
-    tests/test_db.c \
-    -o test_db
-
-	gcc $(CFLAGS) \
-		src/storage.c \
-		src/buffer_pool.c \
-		src/page_manager.c \
-		tests/test_storage.c \
-		-o test_storage
-
-	gcc $(CFLAGS) \
-    src/heap.c \
-    tests/test_heap.c \
-    -o test_heap
-
-	gcc $(CFLAGS) \
-    src/parser.c \
-    tests/test_parser.c \
-    -o test_parser
-
-	gcc $(CFLAGS) \
-    src/hash_table.c \
-    src/bst.c \
-    src/heap.c \
-    src/db.c \
-    src/storage.c \
-    src/buffer_pool.c \
-    src/page_manager.c \
-		src/request_queue.c \
-    tests/test_concurrency.c \
-    -o test_concurrency
-
-	gcc $(CFLAGS) -pthread \
-    src/request_queue.c \
-    tests/test_request_queue.c \
-    -o test_request_queue
-
-	gcc $(CFLAGS) -pthread \
-    src/request_queue.c \
-    src/worker_pool.c \
-    src/db.c \
-    src/storage.c \
-    src/page_manager.c \
-		src/buffer_pool.c \
-    src/hash_table.c \
-    src/bst.c \
-    src/heap.c \
-    tests/test_worker_pool.c \
-    -o test_worker_pool
-
-	gcc -Wall -Wextra -std=c11 -Iinclude -pthread -g \
-    src/http_server.c \
-    src/http_connection.c \
-    src/http_request.c \
-    src/http_dispatch.c \
-    src/request_queue.c \
-    src/worker_pool.c \
-    src/db.c \
-    src/storage.c \
-    src/buffer_pool.c \
-    src/page_manager.c \
-    src/hash_table.c \
-    src/bst.c \
-    src/heap.c \
-    tests/test_http_server.c \
-    -o test_http_server
-
-	gcc -Wall -Wextra -std=c11 -Iinclude -pthread -g \
-    src/http_connection.c \
-    src/http_request.c \
-    src/http_dispatch.c \
-    src/worker_pool.c \
-    src/request_queue.c \
-    src/db.c \
-    src/storage.c \
-    src/buffer_pool.c \
-    src/page_manager.c \
-    src/hash_table.c \
-    src/bst.c \
-    src/heap.c \
-    tests/test_http_connection.c \
-    -o test_http_connection
-
-	gcc -Wall -Wextra -std=c11 -Iinclude -g \
-    src/http_request.c \
-    tests/test_http_request.c \
-    -o test_http_request
-
-	gcc -Wall -Wextra -std=c11 -Iinclude -pthread -g \
-    src/http_request.c \
-    src/http_dispatch.c \
-    src/request_queue.c \
-    tests/test_http_dispatch.c \
-    -o test_http_dispatch
-
+test: $(TESTS)
 	./test_page_manager
 	./test_buffer_pool
 	./test_storage
@@ -142,11 +63,54 @@ test:
 	./test_http_connection
 	./test_http_request
 	./test_http_dispatch
+	./test_http_response
+
+test_page_manager: src/page_manager.c tests/test_page_manager.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_buffer_pool: src/buffer_pool.c src/page_manager.c tests/test_buffer_pool.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_storage: src/storage.c src/buffer_pool.c src/page_manager.c tests/test_storage.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_db: $(DB_SRC) tests/test_db.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_heap: src/heap.c tests/test_heap.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_parser: src/parser.c tests/test_parser.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_concurrency: $(DB_SRC) $(CONCURRENCY_SRC) tests/test_concurrency.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_request_queue: src/request_queue.c tests/test_request_queue.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_worker_pool: $(DB_SRC) $(CONCURRENCY_SRC) tests/test_worker_pool.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_http_server: $(HTTP_SRC) $(CONCURRENCY_SRC) $(DB_SRC) tests/test_http_server.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_http_connection: $(HTTP_SRC) $(CONCURRENCY_SRC) $(DB_SRC) tests/test_http_connection.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_http_request: src/http_request.c tests/test_http_request.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_http_dispatch: \
+	src/http_request.c \
+	src/http_dispatch.c \
+	src/request_queue.c \
+	tests/test_http_dispatch.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_http_response: src/http_response.c tests/test_http_response.c
+	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
 	rm -rf build
-	rm -f test_page_manager test_buffer_pool test_storage \
-	test_db test_heap test_parser test_concurrency *.db \
-	test_request_queue test_worker_pool test_http_server \
-	test_http_connection test_http_request test_http_dispatch
-
+	rm -f $(TESTS) *.db

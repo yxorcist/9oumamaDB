@@ -15,8 +15,10 @@ static void *worker_main(void *arg) {
 
   Request *request;
 
-  while (request_queue_pop(pool->queue, &request))
+  while (request_queue_pop(pool->queue, &request)) {
     db_execute_request(pool->db, request);
+    request_complete(request);
+  }
 
   return NULL;
 }
