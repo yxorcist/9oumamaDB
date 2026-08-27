@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -12,6 +13,16 @@
 struct HTTPConnection {
   int client_fd;
 };
+
+static void send_error_response(int client_fd, int status_code, const char *body) {
+
+  char response[1024];
+
+  if (!http_response_build(response, sizeof(response), status_code, body))
+    return;
+
+  send(client_fd, response, strlen(response), 0);
+}
 
 HTTPConnection *http_connection_create(int client_fd) {
   if (client_fd < 0)
@@ -75,6 +86,7 @@ void http_connection_handle(WorkerPool *pool, int client_fd) {
   HTTPRequest http_request;
 
   if (!http_request_parse(buffer, &http_request)) {
+    send_error_response(client_fd, 400, "bad request");
     close(client_fd);
     return;
   }
@@ -82,12 +94,14 @@ void http_connection_handle(WorkerPool *pool, int client_fd) {
   Request request;
 
   if (!http_request_to_db_request(&http_request, &request)) {
+    send_error_response(client_fd, 400, "bad request");
     close(client_fd);
     return;
   }
 
   if (!worker_pool_submit(pool, &request)) {
     request_destroy(&request);
+    send_error_response(client_fd, 500, "internal server error");
     close(client_fd);
     return;
   }
