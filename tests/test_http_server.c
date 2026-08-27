@@ -1,34 +1,59 @@
 #include <assert.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
+#include "db.h"
 #include "http_server.h"
+#include "worker_pool.h"
 
 static void test_http_server_create(void) {
-  HTTPServer *server = http_server_create(8080);
+  DB *db = db_create();
+  assert(db != NULL);
+
+  WorkerPool *pool = worker_pool_create(db, 1, 4);
+  assert(pool != NULL);
+
+  HTTPServer *server = http_server_create(8080, pool);
 
   assert(server != NULL);
 
   http_server_free(server);
+  worker_pool_free(pool);
+  db_free(db);
 
   printf("PASS: HTTP server creation\n");
 }
 
 static void test_http_server_start(void) {
-  HTTPServer *server = http_server_create(8080);
+  DB *db = db_create();
+  assert(db != NULL);
+
+  WorkerPool *pool = worker_pool_create(db, 1, 4);
+  assert(pool != NULL);
+
+  HTTPServer *server = http_server_create(8080, pool);
 
   assert(server != NULL);
   assert(http_server_start(server));
 
   http_server_stop(server);
   http_server_free(server);
+  worker_pool_free(pool);
+  db_free(db);
 
   printf("PASS: HTTP server start/stop\n");
 }
 
 static void test_http_server_accept(void) {
-  HTTPServer *server = http_server_create(8080);
+  DB *db = db_create();
+  assert(db != NULL);
+
+  WorkerPool *pool = worker_pool_create(db, 1, 4);
+  assert(pool != NULL);
+
+  HTTPServer *server = http_server_create(8080, pool);
 
   assert(server != NULL);
   assert(http_server_start(server));
@@ -42,7 +67,8 @@ static void test_http_server_accept(void) {
       .sin_port = htons(8080),
   };
 
-  assert(connect(client_fd, (struct sockaddr *)&address, sizeof(address)) == 0);
+  assert(connect(client_fd, (struct sockaddr *)&address,
+                 sizeof(address)) == 0);
 
   int server_client_fd = http_server_accept(server);
 
@@ -51,7 +77,10 @@ static void test_http_server_accept(void) {
   close(server_client_fd);
   close(client_fd);
 
+  http_server_stop(server);
   http_server_free(server);
+  worker_pool_free(pool);
+  db_free(db);
 
   printf("PASS: HTTP server accept\n");
 }

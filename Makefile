@@ -84,13 +84,36 @@ test:
     tests/test_worker_pool.c \
     -o test_worker_pool
 
-	gcc $(CFLAGS) \
+	gcc -Wall -Wextra -std=c11 -Iinclude -pthread -g \
     src/http_server.c \
+    src/http_connection.c \
+    src/http_request.c \
+    src/http_dispatch.c \
+    src/request_queue.c \
+    src/worker_pool.c \
+    src/db.c \
+    src/storage.c \
+    src/buffer_pool.c \
+    src/page_manager.c \
+    src/hash_table.c \
+    src/bst.c \
+    src/heap.c \
     tests/test_http_server.c \
     -o test_http_server
 
-	gcc -Wall -Wextra -std=c11 -Iinclude -g \
+	gcc -Wall -Wextra -std=c11 -Iinclude -pthread -g \
     src/http_connection.c \
+    src/http_request.c \
+    src/http_dispatch.c \
+    src/worker_pool.c \
+    src/request_queue.c \
+    src/db.c \
+    src/storage.c \
+    src/buffer_pool.c \
+    src/page_manager.c \
+    src/hash_table.c \
+    src/bst.c \
+    src/heap.c \
     tests/test_http_connection.c \
     -o test_http_connection
 

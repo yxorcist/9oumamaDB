@@ -4,14 +4,16 @@
 #include <unistd.h>
 
 #include "http_server.h"
+#include "http_connection.h"
 
 struct HTTPServer {
   int port;
   int server_fd;
+  WorkerPool *pool;
 };
 
-HTTPServer *http_server_create(int port) {
-  if (port <= 0 || port > 65535)
+HTTPServer *http_server_create(int port, WorkerPool *pool) {
+  if (port <= 0 || port > 65535 || !pool)
     return NULL;
 
   HTTPServer *server = malloc(sizeof(HTTPServer));
@@ -21,6 +23,7 @@ HTTPServer *http_server_create(int port) {
 
   server->port = port;
   server->server_fd = -1;
+  server->pool = pool;
 
   return server;
 }
@@ -89,4 +92,18 @@ int http_server_accept(HTTPServer *server) {
   socklen_t client_len = sizeof(client);
 
   return accept(server->server_fd, (struct sockaddr *)&client, &client_len);
+}
+
+void http_server_run(HTTPServer *server) {
+  if (!server)
+    return;
+
+  while (1) {
+    int client_fd = http_server_accept(server);
+
+    if (client_fd < 0)
+      break;
+
+    http_connection_handle(server->pool, client_fd);
+  }
 }

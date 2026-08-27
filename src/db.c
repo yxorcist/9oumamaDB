@@ -22,6 +22,13 @@ struct DB {
   pthread_mutex_t mutex;
 };
 
+int db_in_transaction(DB *db) {
+  if (!db)
+    return 0;
+
+  return db->in_transaction;
+}
+
 static int db_rebuild_indexes(DB *db) {
 
   if (!db)
