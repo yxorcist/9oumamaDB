@@ -99,6 +99,13 @@ test:
     tests/test_http_request.c \
     -o test_http_request
 
+	gcc -Wall -Wextra -std=c11 -Iinclude -pthread -g \
+    src/http_request.c \
+    src/http_dispatch.c \
+    src/request_queue.c \
+    tests/test_http_dispatch.c \
+    -o test_http_dispatch
+
 	./test_page_manager
 	./test_buffer_pool
 	./test_storage
@@ -111,11 +118,12 @@ test:
 	./test_http_server
 	./test_http_connection
 	./test_http_request
+	./test_http_dispatch
 
 clean:
 	rm -rf build
 	rm -f test_page_manager test_buffer_pool test_storage \
 	test_db test_heap test_parser test_concurrency *.db \
 	test_request_queue test_worker_pool test_http_server \
-	test_http_connection test_http_request
+	test_http_connection test_http_request test_http_dispatch
 
