@@ -2,15 +2,33 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <pthread.h>
 
-#include "http_server.h"
 #include "http_connection.h"
+#include "http_server.h"
 
 struct HTTPServer {
   int port;
   int server_fd;
   WorkerPool *pool;
+  int running;
 };
+
+struct ConnectionArgs {
+  WorkerPool *pool;
+  int client_fd;
+};
+
+static void *connection_worker(void *arg) {
+
+  struct ConnectionArgs *args = arg;
+
+  http_connection_handle(args->pool, args->client_fd);
+
+  free(args);
+
+  return NULL;
+}
 
 HTTPServer *http_server_create(int port, WorkerPool *pool) {
   if (port <= 0 || port > 65535 || !pool)
@@ -24,6 +42,7 @@ HTTPServer *http_server_create(int port, WorkerPool *pool) {
   server->port = port;
   server->server_fd = -1;
   server->pool = pool;
+  server->running = 0;
 
   return server;
 }
@@ -71,6 +90,8 @@ int http_server_start(HTTPServer *server) {
     return 0;
   }
 
+  server->running = 1;
+
   return 1;
 }
 
@@ -78,7 +99,10 @@ void http_server_stop(HTTPServer *server) {
   if (!server)
     return;
 
+  server->running = 0;
+
   if (server->server_fd >= 0) {
+    shutdown(server->server_fd, SHUT_RDWR);
     close(server->server_fd);
     server->server_fd = -1;
   }
@@ -98,12 +122,30 @@ void http_server_run(HTTPServer *server) {
   if (!server)
     return;
 
-  while (1) {
+  while (server->running) {
     int client_fd = http_server_accept(server);
 
     if (client_fd < 0)
       break;
 
-    http_connection_handle(server->pool, client_fd);
+    struct ConnectionArgs *args = malloc(sizeof(struct ConnectionArgs));
+
+    if (!args) {
+      close(client_fd);
+      continue;
+    }
+
+    args->pool = server->pool;
+    args->client_fd = client_fd;
+
+    pthread_t thread;
+
+    if (pthread_create(&thread, NULL, connection_worker, args) != 0) {
+      free(args);
+      close(client_fd);
+      continue;
+    }
+
+    pthread_detach(thread);
   }
 }
