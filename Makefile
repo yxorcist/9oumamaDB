@@ -1,7 +1,12 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -Iinclude -pthread -g
 
+BUILD_DIR = build
+OBJ_DIR = $(BUILD_DIR)/obj
+TEST_DIR = $(BUILD_DIR)/tests
+
 SRC = $(filter-out src/main.c,$(wildcard src/*.c))
+OBJ = $(patsubst src/%.c,$(OBJ_DIR)/%.o,$(SRC))
 
 TESTS = \
 	test_page_manager \
@@ -20,36 +25,31 @@ TESTS = \
 	test_http_dispatch \
 	test_http_response
 
-TEST_DIR = build/tests
+.PHONY: all run test clean
 
-all:
-	mkdir -p build
-	$(CC) $(CFLAGS) $(SRC) src/main.c -o build/9oumamaDB
+all: $(BUILD_DIR)/9oumamaDB
+
+$(BUILD_DIR)/9oumamaDB: $(OBJ) src/main.c
+	mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(OBJ) src/main.c -o $@
+
+$(OBJ_DIR)/%.o: src/%.c
+	mkdir -p $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(TEST_DIR)/%: tests/%.c $(OBJ)
+	mkdir -p $(TEST_DIR)
+	$(CC) $(CFLAGS) $(OBJ) $< -o $@
+
+test: $(addprefix $(TEST_DIR)/,$(TESTS))
+	@for test in $^; do \
+		echo "=== $$test ==="; \
+		./$$test || exit 1; \
+	done
 
 run: all
-	./build/9oumamaDB
-
-test:
-	mkdir -p $(TEST_DIR)
-
-	$(CC) $(CFLAGS) $(SRC) tests/test_page_manager.c -o $(TEST_DIR)/test_page_manager
-	$(CC) $(CFLAGS) $(SRC) tests/test_buffer_pool.c -o $(TEST_DIR)/test_buffer_pool
-	$(CC) $(CFLAGS) $(SRC) tests/test_storage.c -o $(TEST_DIR)/test_storage
-	$(CC) $(CFLAGS) $(SRC) tests/test_db.c -o $(TEST_DIR)/test_db
-	$(CC) $(CFLAGS) $(SRC) tests/test_heap.c -o $(TEST_DIR)/test_heap
-	$(CC) $(CFLAGS) $(SRC) tests/test_parser.c -o $(TEST_DIR)/test_parser
-	$(CC) $(CFLAGS) $(SRC) tests/test_concurrency.c -o $(TEST_DIR)/test_concurrency
-	$(CC) $(CFLAGS) $(SRC) tests/test_request_queue.c -o $(TEST_DIR)/test_request_queue
-	$(CC) $(CFLAGS) $(SRC) tests/test_worker_pool.c -o $(TEST_DIR)/test_worker_pool
-	$(CC) $(CFLAGS) $(SRC) tests/test_http_server.c -o $(TEST_DIR)/test_http_server
-	$(CC) $(CFLAGS) $(SRC) tests/test_http_connection.c -o $(TEST_DIR)/test_http_connection
-	$(CC) $(CFLAGS) $(SRC) tests/test_http_concurrency.c -o $(TEST_DIR)/test_http_concurrency
-	$(CC) $(CFLAGS) $(SRC) tests/test_http_request.c -o $(TEST_DIR)/test_http_request
-	$(CC) $(CFLAGS) $(SRC) tests/test_http_dispatch.c -o $(TEST_DIR)/test_http_dispatch
-	$(CC) $(CFLAGS) $(SRC) tests/test_http_response.c -o $(TEST_DIR)/test_http_response
-
-	$(foreach test,$(TESTS),./$(TEST_DIR)/$(test);)
+	./$(BUILD_DIR)/9oumamaDB
 
 clean:
-	rm -rf build
+	rm -rf $(BUILD_DIR)
 	rm -f *.db
