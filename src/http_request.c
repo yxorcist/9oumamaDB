@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <stdlib.h>
 
 #include "http_request.h"
@@ -86,7 +87,7 @@ int http_request_get_header(const HTTPRequest *request, const char *name, const 
     return 0;
 
   for (int i = 0; i < request->header_count; i++) {
-    if (strcmp(request->headers[i].name, name) == 0) {
+    if (strcasecmp(request->headers[i].name, name) == 0) {
       *value = request->headers[i].value;
       return 1;
     }

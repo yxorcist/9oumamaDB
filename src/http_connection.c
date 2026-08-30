@@ -14,14 +14,33 @@ struct HTTPConnection {
   int client_fd;
 };
 
+static int send_all(int fd, const char *data, size_t length) {
+  size_t sent = 0;
+
+  while (sent < length) {
+    ssize_t result = send(fd, data + sent, length - sent, 0);
+
+    if (result <= 0)
+      return 0;
+
+    sent += (size_t)result;
+  }
+
+  return 1;
+}
+
 static void send_error_response(int client_fd, int status_code, const char *body) {
 
   char response[1024];
 
-  if (!http_response_build(response, sizeof(response), status_code, body))
+  if (!http_response_build( response, 
+                           sizeof(response), 
+                           status_code, 
+                           "text/plain", 
+                           body))
     return;
 
-  send(client_fd, response, strlen(response), 0);
+  send_all(client_fd, response, strlen(response));
 }
 
 HTTPConnection *http_connection_create(int client_fd) {
@@ -50,6 +69,7 @@ void http_connection_free(HTTPConnection *connection) {
 
 int http_connection_read(HTTPConnection *connection, char *buffer,
                          size_t capacity) {
+
   if (!connection || !buffer || capacity == 0)
     return -1;
 
@@ -115,11 +135,13 @@ void http_connection_handle(WorkerPool *pool, int client_fd) {
   if (request.type == CMD_GET) {
     if (request.found) {
       snprintf(response_body, sizeof(response_body),
-              "%d", request.result);
+              "{\"key\":%d,\"value\":%d}",
+               request.key,
+               request.result);
       status_code = 200;
     } else {
       snprintf(response_body, sizeof(response_body),
-              "not found");
+              "{\"error\":\"not found\"}");
       status_code = 404;
     }
   } else if (request.result) {
@@ -134,7 +156,7 @@ void http_connection_handle(WorkerPool *pool, int client_fd) {
   char response[1024];
 
   if (http_response_build(response, sizeof(response),
-                          status_code, response_body)) {
+                          status_code, "application/json", response_body)) {
     send(client_fd, response, strlen(response), 0);
   }
 

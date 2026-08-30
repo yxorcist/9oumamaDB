@@ -24,7 +24,7 @@ static void *worker_main(void *arg) {
 }
 
 WorkerPool *worker_pool_create(DB *db, int worker_count, int queue_capacity) {
-  if (worker_count == 0 || queue_capacity <= 0 || !db)
+  if (worker_count <= 0 || queue_capacity <= 0 || !db)
     return NULL;
 
   WorkerPool *pool = malloc(sizeof(WorkerPool));

@@ -35,7 +35,9 @@ void page_manager_free(PageManager *manager) {
   if (!manager)
     return;
 
-  fclose(manager->file);
+  if (manager->file)
+    fclose(manager->file);
+
   free(manager);
 }
 

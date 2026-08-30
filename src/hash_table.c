@@ -13,21 +13,34 @@ struct HashTable {
 };
 
 static int hash(int key, int size) {
-  if (key < 0)
-    key = -key;
-  return key % size;
+  unsigned int value = (unsigned int) key;
+  return (int) (value % (unsigned int) size);
 }
 
 HashTable *ht_create(int size) {
+  if (size <= 0)
+    return NULL;
+
   HashTable *ht = malloc(sizeof(HashTable));
+
+  if (!ht)
+    return NULL;
 
   ht->size = size;
   ht->buckets = calloc(size, sizeof(Node *));
+
+  if (!ht->buckets) {
+    free(ht);
+    return NULL;
+  }
 
   return ht;
 }
 
 void ht_free(HashTable *ht) {
+
+  if (!ht)
+    return;
 
   for (int i = 0; i < ht->size; i++) {
     Node *n = ht->buckets[i];
@@ -58,6 +71,9 @@ void ht_insert(HashTable *ht, Entry *entry) {
   }
 
   Node *new_node = malloc(sizeof(Node));
+
+  if (!new_node)
+    return;
 
   new_node->entry = entry;
   new_node->next = ht->buckets[idx];

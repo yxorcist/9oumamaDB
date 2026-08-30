@@ -4,6 +4,9 @@
 #include "parser.h"
 
 int parse_command(const char *line, Command *command) {
+  if (!line || !command)
+    return 0;
+
   char name[32];
   char extra[32];
 

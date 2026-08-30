@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "http_dispatch.h"
 
@@ -7,16 +8,18 @@ static int parse_key(const char *path, int *key) {
   if (!path || !key)
     return 0;
 
-  if (path[0] != '/')
+  const char *prefix = "/kv/";
+
+  if (strncmp(path, prefix, strlen(prefix)) != 0)
     return 0;
 
   char *end;
-  long value = strtol(path + 1, &end, 10);
+  long value = strtol(path + strlen(prefix), &end, 10);
 
   if (*end != '\0')
     return 0;
 
-  if (value < 0 || value > 2147483647)
+  if (value < 0 || value > INT_MAX)
     return 0;
 
   *key = (int)value;
@@ -55,14 +58,20 @@ int http_request_to_db_request(
     if (http_request->body_length == 0)
       return 0;
 
+    const char *prefix = "{\"value\":";
+    const char *body = http_request->body;
+
+    if (strncmp(body, prefix, strlen(prefix)) != 0)
+      return 0;
+
     char *end;
 
-    long parsed_value = strtol(
-        http_request->body,
-        &end,
-        10);
+    long parsed_value = strtol(body + strlen(prefix), &end, 10);
 
-    if (*end != '\0')
+    if (parsed_value < 0 || parsed_value > INT_MAX)
+      return 0;
+
+    if (strcmp(end, "}") != 0)
       return 0;
 
     value = (int)parsed_value;

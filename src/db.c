@@ -7,6 +7,7 @@
 #include "entry.h"
 #include "hash_table.h"
 #include "heap.h"
+#include "request_queue.h"
 #include "storage.h"
 
 struct DB {
@@ -96,13 +97,21 @@ DB *db_create() {
   db->in_transaction = 0;
   db->transaction_count = 0;
 
-  if (pthread_mutex_init(&db->mutex, NULL) != 0) {
+  if (!db->storage || !db->ht || !db->tree || !db->heap) {
+    storage_free(db->storage);
+    ht_free(db->ht);
+    bst_free(db->tree);
+    heap_free(db->heap);
     free(db);
     return NULL;
   }
 
-  if (!db->storage || !db->ht || !db->tree || !db->heap) {
-    db_free(db);
+  if (pthread_mutex_init(&db->mutex, NULL) != 0) {
+    storage_free(db->storage);
+    ht_free(db->ht);
+    bst_free(db->tree);
+    heap_free(db->heap);
+    free(db);
     return NULL;
   }
 
@@ -295,16 +304,18 @@ int db_topk(DB *db, int k, Entry *results) {
   return result_count;
 }
 
-void db_range(DB *db, int a, int b) {
+int db_range(DB *db, int a, int b, Entry *results, int capacity) {
 
-  if (!db)
-    return;
+  if (!db || !results || capacity <= 0)
+    return 0;
 
   pthread_mutex_lock(&db->mutex);
 
-  bst_range(db->tree, a, b);
+  int count = bst_range(db->tree, a, b, results, capacity);
 
   pthread_mutex_unlock(&db->mutex);
+
+  return count;
 }
 
 int db_count(DB *db) {
@@ -326,7 +337,14 @@ int db_save(DB *db) {
     return 0;
 
   pthread_mutex_lock(&db->mutex);
+
+  if (db->in_transaction) {
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
   int result = db_persist(db);
+
   pthread_mutex_unlock(&db->mutex);
 
   return result;
@@ -417,9 +435,12 @@ int db_commit(DB *db) {
     return 0;
   }
 
+  storage_set_writes_enabled(db->storage, 1);
+
   int result = db_persist(db);
 
   if (!result) {
+  storage_set_writes_enabled(db->storage, 0);
     pthread_mutex_unlock(&db->mutex);
     return 0;
   }
@@ -517,6 +538,20 @@ int db_execute_request(DB *db, Request *request) {
 
   case CMD_ROLLBACK:
     request->result = db_rollback(db);
+    break;
+
+  case CMD_TOPK:
+    request->entry_count = db_topk(db, request->k, request->entries);
+    request->result = request->entry_count >= 0;
+    break;
+
+  case CMD_COUNT:
+    request->result = db_count(db);
+    break;
+
+  case CMD_RANGE:
+    request->entry_count = db_range(db, request->a, request->b, request->entries, REQUEST_RESULT_CAPACITY);
+    request->result = 1;
     break;
 
   default:

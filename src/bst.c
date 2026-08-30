@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "bst.h"
@@ -39,18 +38,22 @@ static Node *insert_rec(Node *root, Entry *entry) {
   return root;
 }
 
-static void range_rec(Node *root, int a, int b) {
-  if (!root)
-    return;
+static int range_rec(Node *root, int a, int b, Entry *results, int capacity, int *count) {
+  if (!root || *count >= capacity)
+    return 1;
 
   if (root->entry->key > a)
-    range_rec(root->left, a, b);
+    range_rec(root->left, a, b, results, capacity, count);
 
-  if (root->entry->key >= a && root->entry->key <= b)
-    printf("%d %d\n", root->entry->key, root->entry->value);
+  if (root->entry->key >= a && root->entry->key <= b && *count < capacity) {
+    results[*count] = *root->entry;
+    (*count)++;
+  }
 
   if (root->entry->key < b)
-    range_rec(root->right, a, b);
+    range_rec(root->right, a, b, results, capacity, count);
+
+  return 1;
 }
 
 static void free_rec(Node *root) {
@@ -65,20 +68,40 @@ static void free_rec(Node *root) {
 
 BST *bst_create(void) {
   BST *t = malloc(sizeof(BST));
+
+  if (!t)
+    return NULL;
+
   t->root = NULL;
+
   return t;
 }
 
 void bst_free(BST *tree) {
+  if (!tree)
+    return;
+
   free_rec(tree->root);
   free(tree);
 }
 
 void bst_insert(BST *tree, Entry *entry) {
+  if (!tree || !entry)
+    return;
+
   tree->root = insert_rec(tree->root, entry);
 }
 
-void bst_range(BST *tree, int a, int b) { range_rec(tree->root, a, b); }
+int bst_range(BST *tree, int a, int b, Entry *results, int capacity) {
+  if (!tree || !results || capacity <= 0 || a > b)
+      return 0;
+
+  int count = 0;
+
+  count = range_rec(tree->root, a, b, results, capacity, 0);
+
+  return count;
+}
 
 static Node *min_node(Node *n) {
 
@@ -131,6 +154,9 @@ static Node *delete_rec(Node *root, int key) {
 }
 
 void bst_delete(BST *tree, int key) {
+  if (!tree)
+    return;
+
   tree->root = delete_rec(tree->root, key);
 }
 

@@ -112,10 +112,13 @@ int heap_remove(Heap *heap, Entry *entry) {
 
   heap->size--;
 
-  if (index == heap->size)
+  if (index == heap->size) {
+    heap->entries[heap->size] = NULL;
     return 1;
+  }
 
   heap->entries[index] = heap->entries[heap->size];
+  heap->entries[heap->size] = NULL;
 
   /* replacement may need to move either direction */
   if (index > 0) {
@@ -149,7 +152,10 @@ Entry *heap_extract_max(Heap *heap) {
 
   if (heap->size > 0) {
     heap->entries[0] = heap->entries[heap->size];
+    heap->entries[heap->size] = NULL;
     sift_down(heap, 0);
+  } else {
+    heap->entries[0] = NULL;
   }
 
   return max;

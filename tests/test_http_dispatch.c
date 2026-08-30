@@ -8,8 +8,8 @@ static void test_get(void) {
   HTTPRequest http = {0};
 
   strcpy(http.method, "GET");
-  strcpy(http.path, "/42");
 
+  strcpy(http.path, "/kv/42");
   Request request;
 
   assert(http_request_to_db_request(&http, &request));
@@ -27,9 +27,9 @@ static void test_post(void) {
   HTTPRequest http = {0};
 
   strcpy(http.method, "POST");
-  strcpy(http.path, "/42");
-  strcpy(http.body, "100");
-  http.body_length = 3;
+  strcpy(http.path, "/kv/42");
+  strcpy(http.body, "{\"value\":100}");
+  http.body_length = strlen(http.body);
 
   Request request;
 
@@ -48,9 +48,9 @@ static void test_put(void) {
   HTTPRequest http = {0};
 
   strcpy(http.method, "PUT");
-  strcpy(http.path, "/42");
-  strcpy(http.body, "200");
-  http.body_length = 3;
+  strcpy(http.path, "/kv/42");
+  strcpy(http.body, "{\"value\":200}");
+  http.body_length = strlen(http.body);
 
   Request request;
 
@@ -69,7 +69,7 @@ static void test_delete(void) {
   HTTPRequest http = {0};
 
   strcpy(http.method, "DELETE");
-  strcpy(http.path, "/42");
+  strcpy(http.path, "/kv/42");
 
   Request request;
 

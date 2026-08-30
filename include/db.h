@@ -18,7 +18,7 @@ int db_topk(DB *db, int k, Entry *results);
 
 void db_clear(DB *db);
 
-void db_range(DB *db, int a, int b);
+int db_range(DB *db, int a, int b, Entry *results, int capacity);
 int db_count(DB *db);
 
 int db_save(DB *db);

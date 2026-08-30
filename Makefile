@@ -1,6 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -Iinclude -pthread -g
 
+SANITIZER_FLAGS = -fsanitize=address,undefined -fno-omit-frame-pointer
+
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 TEST_DIR = $(BUILD_DIR)/tests
@@ -46,6 +48,9 @@ test: $(addprefix $(TEST_DIR)/,$(TESTS))
 		echo "=== $$test ==="; \
 		./$$test || exit 1; \
 	done
+
+sanitize: CFLAGS += $(SANITIZER_FLAGS)
+sanitize: clean test
 
 run: all
 	./$(BUILD_DIR)/9oumamaDB

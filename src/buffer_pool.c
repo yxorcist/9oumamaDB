@@ -29,7 +29,7 @@ BufferPool *buffer_pool_create(PageManager *manager) {
 
   pool->manager = manager;
   pool->clock = 0;
-  pool->writes_enabled = 0;
+  pool->writes_enabled = 1;
 
   for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
     pool->frames[i].page_id = -1;
@@ -163,9 +163,11 @@ int buffer_pool_new_page(BufferPool *pool, int page_id) {
   Frame *frame = &pool->frames[lru_index];
 
   if (frame->dirty) {
-    if (!page_manager_write(pool->manager, frame->page_id, &frame->page)) {
+    if (!pool->writes_enabled)
       return 0;
-    }
+
+    if (!page_manager_write(pool->manager, frame->page_id, &frame->page))
+      return 0;
   }
 
   memset(frame->page.data, 0, PAGE_SIZE);
@@ -196,6 +198,9 @@ void buffer_pool_mark_dirty(BufferPool *pool, int page_id) {
 
 int buffer_pool_flush(BufferPool *pool) {
   if (!pool)
+    return 0;
+
+  if (!pool->writes_enabled)
     return 0;
 
   for (int i = 0; i < BUFFER_POOL_SIZE; i++) {

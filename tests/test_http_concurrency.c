@@ -29,27 +29,23 @@ static void *client_worker(void *arg) {
 
   assert(connect(fd, (struct sockaddr *)&address, sizeof(address)) == 0);
 
-  char value_string[32];
+  char body[64];
 
-  int value_length = snprintf(
-      value_string,
-      sizeof(value_string),
-      "%d",
-      args->value);
+  int body_length = snprintf(body, sizeof(body), "{\"value\":%d}", args->value);
 
   char request[256];
 
-  int length = snprintf(
-      request,
-      sizeof(request),
-      "POST /%d HTTP/1.1\r\n"
-      "Host: localhost\r\n"
-      "Content-Length: %d\r\n"
-      "\r\n"
-      "%s",
-      args->key,
-      value_length,
-      value_string);
+  int length = snprintf(request, 
+                        sizeof(request),
+                        "POST /kv/%d HTTP/1.1\r\n"
+                        "Host: localhost\r\n"
+                        "Content-Length: %d\r\n"
+                        "Content-Type: application/json\r\n"
+                        "\r\n"
+                        "%s",
+                        args->key,
+                        body_length,
+                        body);
 
   assert(send(fd, request, length, 0) == length);
 
@@ -61,7 +57,11 @@ static void *client_worker(void *arg) {
 
   response[received] = '\0';
 
-  assert(strstr(response, "200 OK") != NULL);
+  if (strstr(response, "200 OK") == NULL) {
+    fprintf(stderr, "CLIENT %d RECEIVED: \n%s\n", args->key, response);
+    assert(0);
+  }
+
 
   close(fd);
 

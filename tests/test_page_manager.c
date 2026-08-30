@@ -32,4 +32,9 @@ int main(void) {
 
   printf("%s\n", page0.data);
   printf("%s\n", page1.data);
+
+  page_manager_free(manager);
+  remove(filename);
+
+  return 0;
 }

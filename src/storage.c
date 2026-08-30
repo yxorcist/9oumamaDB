@@ -193,8 +193,6 @@ int storage_save(Storage *storage) {
 
   buffer_pool_mark_dirty(storage->buffer_pool, 0);
 
-  storage->page_count = page_count;
-
   /* page 1..N contain entries */
   for (int page_id = 0; page_id < page_count; page_id++) {
 
@@ -242,6 +240,7 @@ int storage_load(Storage *storage) {
     storage->count = 0;
     storage->free_page_head = NO_FREE_PAGE;
     storage->page_count = 0;
+    storage->active_page_count = 0;
     return 1;
   }
 
@@ -294,6 +293,7 @@ int storage_load(Storage *storage) {
 
   int per_page = entries_per_page();
   int page_count = page_count_for_entries(entry_count);
+  int loaded_count = 0;
 
   /* load entries */
   for (int page_id = 0; page_id < page_count; page_id++) {
@@ -319,6 +319,7 @@ int storage_load(Storage *storage) {
       memcpy(entry, page->data + offset, sizeof(Entry));
 
       storage->entries[i] = entry;
+      loaded_count++;
     }
   }
 
@@ -328,10 +329,11 @@ int storage_load(Storage *storage) {
 
 load_failure:
   /* Free entries that were successfully loaded */
-  for (int i = 0; i < entry_count; i++) {
+  for (int i = 0; i < loaded_count; i++) {
     free(storage->entries[i]);
     storage->entries[i] = NULL;
   }
+
   storage->count = 0;
 
   return 0;

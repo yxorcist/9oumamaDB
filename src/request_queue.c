@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdlib.h>
 
 #include "request_queue.h"
@@ -154,11 +155,21 @@ int request_init(Request *request, CommandType type, int key, int value) {
   request->result = 0;
   request->found = 0;
   request->done = 0;
+  request->entries = NULL;
+  request->entry_count = 0;
 
   if (pthread_mutex_init(&request->mutex, NULL) != 0)
     return 0;
 
   if (pthread_cond_init(&request->completed, NULL) != 0) {
+    pthread_mutex_destroy(&request->mutex);
+    return 0;
+  }
+
+  request->entries = malloc(REQUEST_RESULT_CAPACITY * sizeof(Entry));
+
+  if (!request->entries) {
+    pthread_cond_destroy(&request->completed);
     pthread_mutex_destroy(&request->mutex);
     return 0;
   }
@@ -172,6 +183,9 @@ void request_destroy(Request *request) {
 
   pthread_cond_destroy(&request->completed);
   pthread_mutex_destroy(&request->mutex);
+
+  free(request->entries);
+  request->entries = NULL;
 }
 
 void request_wait(Request *request) {
@@ -189,6 +203,8 @@ void request_wait(Request *request) {
 void request_complete(Request *request) {
   if (!request)
     return;
+
+  pthread_mutex_lock(&request->mutex);
 
   request->done = 1;
 

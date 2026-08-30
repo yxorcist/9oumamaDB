@@ -59,6 +59,9 @@ int http_server_start(HTTPServer *server) {
   if (!server)
     return 0;
 
+  if (server->server_fd >= 0)
+    return 0;
+
   server->server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
   if (server->server_fd < 0)
@@ -146,6 +149,7 @@ void http_server_run(HTTPServer *server) {
       continue;
     }
 
-    pthread_detach(thread);
+    if (pthread_detach(thread) != 0)
+      pthread_join(thread, NULL);
   }
 }

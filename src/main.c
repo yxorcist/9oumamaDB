@@ -4,8 +4,6 @@
 #include "http_server.h"
 #include "worker_pool.h"
 
-#define MAX_LINE 256
-
 int main(void) {
 
   DB *db = db_create();

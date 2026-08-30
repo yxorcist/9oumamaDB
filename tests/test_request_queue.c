@@ -103,6 +103,7 @@ static void test_blocking_push(void) {
 
   request_destroy(&first);
   request_destroy(result);
+  free(result);
 
   request_queue_free(queue);
 
