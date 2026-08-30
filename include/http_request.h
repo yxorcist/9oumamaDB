@@ -1,7 +1,7 @@
 #ifndef HTTP_REQUEST_H
 #define HTTP_REQUEST_H
 
-#include <stdio.h>
+#include <stddef.h>
 
 #define HTTP_METHOD_MAX 16
 #define HTTP_PATH_MAX 256

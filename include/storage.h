@@ -5,7 +5,7 @@
 
 typedef struct Storage Storage;
 
-Storage *storage_create();
+Storage *storage_create(void);
 void storage_free(Storage *storage);
 
 Entry *storage_create_entry(Storage *storage, int key, int value);
