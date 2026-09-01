@@ -21,7 +21,7 @@ static void test_page_reclamation(void) {
   int per_page = 4096 / sizeof(Entry);
 
   for (int i = 0; i < per_page + 1; i++)
-    assert(storage_create_entry(storage, i, i * 10) != NULL);
+    assert(storage_create_entry(storage, i, i * 10, "") != NULL);
 
   assert(storage_save(storage) == 1);
 
@@ -151,9 +151,9 @@ static void test_save_load(void) {
   Storage *storage = storage_create();
   assert(storage != NULL);
 
-  assert(storage_create_entry(storage, 1, 100) != NULL);
-  assert(storage_create_entry(storage, 2, 200) != NULL);
-  assert(storage_create_entry(storage, 3, 300) != NULL);
+  assert(storage_create_entry(storage, 1, 100, "") != NULL);
+  assert(storage_create_entry(storage, 2, 200, "") != NULL);
+  assert(storage_create_entry(storage, 3, 300, "") != NULL);
 
   assert(storage_count(storage) == 3);
   assert(storage_save(storage) == 1);
@@ -196,7 +196,7 @@ static void test_update_persistence(void) {
   Storage *storage = storage_create();
   assert(storage != NULL);
 
-  Entry *entry = storage_create_entry(storage, 42, 100);
+  Entry *entry = storage_create_entry(storage, 42, 100, "");
   assert(entry != NULL);
 
   entry->value = 999;
@@ -230,9 +230,9 @@ static void test_delete_persistence(void) {
   Storage *storage = storage_create();
   assert(storage != NULL);
 
-  Entry *a = storage_create_entry(storage, 1, 100);
-  Entry *b = storage_create_entry(storage, 2, 200);
-  Entry *c = storage_create_entry(storage, 3, 300);
+  Entry *a = storage_create_entry(storage, 1, 100, "");
+  Entry *b = storage_create_entry(storage, 2, 200, "");
+  Entry *c = storage_create_entry(storage, 3, 300, "");
 
   assert(a != NULL);
   assert(b != NULL);
@@ -280,7 +280,7 @@ static void test_multiple_pages(void) {
   const int count = 1000;
 
   for (int i = 0; i < count; i++) {
-    assert(storage_create_entry(storage, i, i * 10) != NULL);
+    assert(storage_create_entry(storage, i, i * 10, "") != NULL);
   }
 
   assert(storage_count(storage) == count);

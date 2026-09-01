@@ -151,6 +151,11 @@ int request_init(Request *request, CommandType type, int key, int value) {
   request->type = type;
   request->key = key;
   request->value = value;
+  request->nickname[0] = '\0';
+
+  request->a = 0;
+  request->b = 0;
+  request->k = 0;
 
   request->result = 0;
   request->found = 0;

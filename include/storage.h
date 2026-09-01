@@ -8,7 +8,7 @@ typedef struct Storage Storage;
 Storage *storage_create(void);
 void storage_free(Storage *storage);
 
-Entry *storage_create_entry(Storage *storage, int key, int value);
+Entry *storage_create_entry(Storage *storage, int key, int value, const char *nickname);
 void storage_delete_entry(Storage *storage, Entry *entry);
 
 void storage_clear(Storage *storage);

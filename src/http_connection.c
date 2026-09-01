@@ -91,6 +91,44 @@ int http_connection_write(HTTPConnection *connection, const char *data,
   return result == (ssize_t)length;
 }
 
+static int entries_to_json(char *buffer, size_t capacity, Entry *entries, int count) {
+  if (!buffer || !entries || capacity == 0 || count < 0)
+    return 0;
+
+  size_t offset = 0;
+
+  int written = snprintf(buffer, capacity, "[");
+
+  if (written < 0 || (size_t)written >= capacity)
+    return 0;
+
+  offset += (size_t)written;
+
+  for (int i = 0; i < count; i++) {
+    Entry *entry = &entries[i];
+
+    written = snprintf(buffer + offset,
+                       capacity - offset,
+                       "%s{\"key\":%d,\"value\":%d,\"nickname\":\"%s\"}",
+                       i > 0 ? "," : "",
+                       entry->key,
+                       entry->value,
+                       entry->nickname);
+
+    if (written < 0 || (size_t)written >= capacity - offset)
+      return 0;
+
+    offset += (size_t)written;
+  }
+
+  written = snprintf(buffer + offset, capacity - offset, "]");
+
+  if (written < 0 || (size_t)written >= capacity - offset)
+    return 0;
+
+  return 1;
+}
+
 void http_connection_handle(WorkerPool *pool, int client_fd) {
   char buffer[HTTP_REQUEST_MAX];
 
@@ -128,36 +166,69 @@ void http_connection_handle(WorkerPool *pool, int client_fd) {
 
   request_wait(&request);
 
-  char response_body[256];
+  char response_body[8192];
 
   int status_code;
 
   if (request.type == CMD_GET) {
     if (request.found) {
+      Entry *entry = &request.entries[0];
+
       snprintf(response_body, sizeof(response_body),
-              "{\"key\":%d,\"value\":%d}",
-               request.key,
-               request.result);
+               "{\"key\":%d,\"value\":%d,\"nickname\":\"%s\"}",
+               entry->key,
+               entry->value,
+               entry->nickname);
+
       status_code = 200;
     } else {
       snprintf(response_body, sizeof(response_body),
-              "{\"error\":\"not found\"}");
+               "{\"error\":\"not found\"}");
       status_code = 404;
     }
-  } else if (request.result) {
-    snprintf(response_body, sizeof(response_body), "OK");
-    status_code = 200;
-  } else {
+
+  } else if (request.type == CMD_TOPK ||
+    request.type == CMD_RANGE) {
+
+    if (!entries_to_json(response_body,
+                         sizeof(response_body),
+                         request.entries,
+                         request.entry_count)) {
+      snprintf(response_body, sizeof(response_body),
+               "{\"error\":\"response too large\"}");
+      status_code = 500;
+    } else {
+      status_code = 200;
+    }
+
+  } else if (request.type == CMD_COUNT) {
+
     snprintf(response_body, sizeof(response_body),
-            "operation failed");
+             "{\"count\":%d}",
+             request.result);
+
+    status_code = 200;
+
+  } else if (request.result) {
+
+    snprintf(response_body, sizeof(response_body),
+             "{\"status\":\"ok\"}");
+
+    status_code = 200;
+
+  } else {
+
+    snprintf(response_body, sizeof(response_body),
+             "{\"error\":\"operation failed\"}");
+
     status_code = 500;
   }
 
-  char response[1024];
+  char response[16384];
 
   if (http_response_build(response, sizeof(response),
                           status_code, "application/json", response_body)) {
-    send(client_fd, response, strlen(response), 0);
+    send_all(client_fd, response, strlen(response));
   }
 
   request_destroy(&request);

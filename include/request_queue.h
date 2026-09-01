@@ -12,6 +12,7 @@ typedef struct {
   CommandType type;
   int key;
   int value;
+  char nickname[NICKNAME_MAX];
 
   int a;
   int b;

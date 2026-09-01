@@ -5,11 +5,11 @@
 #include "heap.h"
 
 int main(void) {
-  Entry a = {1, 40};
-  Entry b = {2, 90};
-  Entry c = {3, 15};
-  Entry d = {4, 70};
-  Entry e = {5, 100};
+  Entry a = {1, 40, ""};
+  Entry b = {2, 90, ""};
+  Entry c = {3, 15, ""};
+  Entry d = {4, 70, ""};
+  Entry e = {5, 100, ""};
 
   Heap *heap = heap_create(5);
   assert(heap != NULL);

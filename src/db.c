@@ -27,7 +27,11 @@ int db_in_transaction(DB *db) {
   if (!db)
     return 0;
 
-  return db->in_transaction;
+  pthread_mutex_lock(&db->mutex);
+  int result = db->in_transaction;
+  pthread_mutex_unlock(&db->mutex);
+
+  return result;
 }
 
 static int db_rebuild_indexes(DB *db) {
@@ -82,7 +86,7 @@ static int db_persist(DB *db) {
   return storage_save(db->storage);
 }
 
-DB *db_create() {
+DB *db_create(void) {
   DB *db = malloc(sizeof(DB));
 
   if (!db)
@@ -149,7 +153,7 @@ void db_free(DB *db) {
   free(db);
 }
 
-int db_insert(DB *db, int key, int value) {
+int db_insert(DB *db, int key, int value, const char *nickname) {
   if (!db)
     return 0;
 
@@ -162,7 +166,7 @@ int db_insert(DB *db, int key, int value) {
     return 0;
   }
 
-  entry = storage_create_entry(db->storage, key, value);
+  entry = storage_create_entry(db->storage, key, value, nickname);
 
   if (!entry) {
     pthread_mutex_unlock(&db->mutex);
@@ -199,6 +203,26 @@ int db_get(DB *db, int key, int *found) {
   pthread_mutex_unlock(&db->mutex);
 
   return value;
+}
+
+int db_get_entry(DB *db, int key, Entry *result) {
+  if (!db || !result)
+    return 0;
+
+  pthread_mutex_lock(&db->mutex);
+
+  Entry *entry = ht_get(db->ht, key);
+
+  if (!entry) {
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  *result = *entry;
+
+  pthread_mutex_unlock(&db->mutex);
+
+  return 1;
 }
 
 int db_delete(DB *db, int key) {
@@ -333,7 +357,7 @@ int db_count(DB *db) {
 }
 
 int db_save(DB *db) {
-  if (!db || db->in_transaction)
+  if (!db)
     return 0;
 
   pthread_mutex_lock(&db->mutex);
@@ -371,7 +395,7 @@ int db_load(DB *db) {
 }
 
 int db_begin(DB *db) {
-  if (!db || db->in_transaction)
+  if (!db)
     return 0;
 
   pthread_mutex_lock(&db->mutex);
@@ -428,6 +452,11 @@ int db_commit(DB *db) {
 
   pthread_mutex_lock(&db->mutex);
 
+  if (!db->in_transaction) {
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
   storage_set_writes_enabled(db->storage, 1);
 
   if (!db->in_transaction) {
@@ -440,7 +469,7 @@ int db_commit(DB *db) {
   int result = db_persist(db);
 
   if (!result) {
-  storage_set_writes_enabled(db->storage, 0);
+    storage_set_writes_enabled(db->storage, 0);
     pthread_mutex_unlock(&db->mutex);
     return 0;
   }
@@ -469,7 +498,7 @@ int db_rollback(DB *db) {
   for (int i = 0; i < db->transaction_count; i++) {
     Entry *snapshot = db->transaction_entries[i];
 
-    if (!storage_create_entry(db->storage, snapshot->key, snapshot->value)) {
+    if (!storage_create_entry(db->storage, snapshot->key, snapshot->value, snapshot->nickname)) {
       pthread_mutex_unlock(&db->mutex);
       return 0;
     }
@@ -500,11 +529,20 @@ int db_execute_request(DB *db, Request *request) {
   switch (request->type) {
 
   case CMD_INSERT:
-    request->result = db_insert(db, request->key, request->value);
+    request->result =
+        db_insert(db, request->key, request->value, request->nickname);
     break;
 
   case CMD_GET:
-    request->result = db_get(db, request->key, &request->found);
+    if (db_get_entry(db, request->key, &request->entries[0])) {
+        request->found = 1;
+        request->entry_count = 1;
+        request->result = request->entries[0].value;
+    } else {
+        request->found = 0;
+        request->entry_count = 0;
+        request->result = 0;
+    }
     break;
 
   case CMD_UPDATE:

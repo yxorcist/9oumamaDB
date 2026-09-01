@@ -1,10 +1,94 @@
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "db.h"
 #include "entry.h"
 
 static void cleanup() { remove("database.db"); }
+
+static void test_nickname_rollback(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  assert(db_insert(db, 10, 1000, "charlie"));
+
+  assert(db_begin(db));
+
+  assert(db_update(db, 10, 5000));
+
+  assert(db_rollback(db));
+
+  Entry entry;
+
+  assert(db_get_entry(db, 10, &entry));
+  assert(entry.value == 1000);
+  assert(strcmp(entry.nickname, "charlie") == 0);
+
+  db_free(db);
+  cleanup();
+
+  printf("PASS: DB nickname rollback\n");
+}
+
+static void test_nickname_persistence(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  assert(db_insert(db, 7, 900, "bob"));
+  assert(db_save(db));
+
+  db_free(db);
+
+  db = db_create();
+  assert(db != NULL);
+
+  Entry entry;
+
+  assert(db_get_entry(db, 7, &entry));
+  assert(entry.key == 7);
+  assert(entry.value == 900);
+  assert(strcmp(entry.nickname, "bob") == 0);
+
+  db_free(db);
+  cleanup();
+
+  printf("PASS: DB nickname persistence\n");
+}
+
+static void test_nickname(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  assert(db_insert(db, 42, 1500, "alice"));
+
+  Entry entry;
+
+  assert(db_get_entry(db, 42, &entry));
+  assert(entry.key == 42);
+  assert(entry.value == 1500);
+  assert(strcmp(entry.nickname, "alice") == 0);
+
+  /*
+   * Updating the score must not modify the nickname.
+   */
+  assert(db_update(db, 42, 2000));
+
+  assert(db_get_entry(db, 42, &entry));
+  assert(entry.value == 2000);
+  assert(strcmp(entry.nickname, "alice") == 0);
+
+  db_free(db);
+  cleanup();
+
+  printf("PASS: DB nickname\n");
+}
 
 static void test_transaction_exit_without_commit(void) {
   cleanup();
@@ -13,7 +97,7 @@ static void test_transaction_exit_without_commit(void) {
   DB *db = db_create();
   assert(db != NULL);
 
-  db_insert(db, 1, 100);
+  db_insert(db, 1, 100, "");
   assert(db_save(db) == 1);
 
   db_free(db);
@@ -54,14 +138,14 @@ static void test_transaction_rollback(void) {
   DB *db = db_create();
   assert(db != NULL);
 
-  db_insert(db, 1, 100);
-  db_insert(db, 2, 200);
+  db_insert(db, 1, 100, "");
+  db_insert(db, 2, 200, "");
 
   assert(db_begin(db));
 
   db_update(db, 1, 999);
   db_delete(db, 2);
-  db_insert(db, 3, 300);
+  db_insert(db, 3, 300, "");
 
   assert(db_count(db) == 2);
 
@@ -110,11 +194,11 @@ static void test_topk(void) {
   DB *db = db_create();
   assert(db != NULL);
 
-  db_insert(db, 1, 40);
-  db_insert(db, 2, 90);
-  db_insert(db, 3, 15);
-  db_insert(db, 4, 70);
-  db_insert(db, 5, 100);
+  db_insert(db, 1, 40, "one");
+  db_insert(db, 2, 90, "two");
+  db_insert(db, 3, 152, "three");
+  db_insert(db, 4, 702, "four");
+  db_insert(db, 5, 100, "five");
 
   Entry results[3];
 
@@ -122,14 +206,17 @@ static void test_topk(void) {
 
   assert(count == 3);
 
-  assert(results[0].key == 5);
-  assert(results[0].value == 100);
+  assert(results[0].key == 4);
+  assert(results[0].value == 702);
+  assert(strcmp(results[0].nickname, "four") == 0);
 
-  assert(results[1].key == 2);
-  assert(results[1].value == 90);
+  assert(results[1].key == 3);
+  assert(results[1].value == 152);
+  assert(strcmp(results[1].nickname, "three") == 0);
 
-  assert(results[2].key == 4);
-  assert(results[2].value == 70);
+  assert(results[2].key == 5);
+  assert(results[2].value == 100);
+  assert(strcmp(results[2].nickname, "five") == 0);
 
   /*
    * TOPK must not modify the database.
@@ -158,7 +245,7 @@ static void test_page_reclamation(void) {
    * Fill two pages.
    */
   for (int i = 0; i < per_page + 1; i++)
-    db_insert(db, i, i * 10);
+    db_insert(db, i, i * 10, "");
 
   assert(db_count(db) == per_page + 1);
   assert(db_save(db) == 1);
@@ -210,9 +297,9 @@ static void test_crud(void) {
   DB *db = db_create();
   assert(db != NULL);
 
-  db_insert(db, 1, 100);
-  db_insert(db, 2, 200);
-  db_insert(db, 3, 300);
+  db_insert(db, 1, 100, "");
+  db_insert(db, 2, 200, "");
+  db_insert(db, 3, 300, "");
 
   assert(db_count(db) == 3);
 
@@ -251,9 +338,9 @@ static void test_persistence(void) {
   DB *db = db_create();
   assert(db != NULL);
 
-  db_insert(db, 10, 1000);
-  db_insert(db, 20, 2000);
-  db_insert(db, 30, 3000);
+  db_insert(db, 10, 1000, "");
+  db_insert(db, 20, 2000, "");
+  db_insert(db, 30, 3000, "");
 
   assert(db_count(db) == 3);
   assert(db_save(db) == 1);
@@ -293,9 +380,9 @@ static void test_delete_persistence(void) {
   DB *db = db_create();
   assert(db != NULL);
 
-  db_insert(db, 1, 100);
-  db_insert(db, 2, 200);
-  db_insert(db, 3, 300);
+  db_insert(db, 1, 100, "");
+  db_insert(db, 2, 200, "");
+  db_insert(db, 3, 300, "");
 
   db_delete(db, 2);
 
@@ -335,6 +422,9 @@ int main(void) {
   test_transactions();
   test_transaction_rollback();
   test_transaction_exit_without_commit();
+  test_nickname();
+  test_nickname_persistence();
+  test_nickname_rollback();
 
   cleanup();
 

@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "buffer_pool.h"
+#include "entry.h"
 #include "page_manager.h"
 #include "storage.h"
 #include "storage_format.h"
@@ -85,7 +86,7 @@ Storage *storage_create(void) {
   return storage;
 }
 
-Entry *storage_create_entry(Storage *storage, int key, int value) {
+Entry *storage_create_entry(Storage *storage, int key, int value, const char *nickname) {
 
   if (!storage)
     return NULL;
@@ -102,6 +103,13 @@ Entry *storage_create_entry(Storage *storage, int key, int value) {
 
   entry->key = key;
   entry->value = value;
+
+  if (nickname) {
+    strncpy(entry->nickname, nickname, NICKNAME_MAX - 1);
+    entry->nickname[NICKNAME_MAX - 1] = '\0';
+  } else {
+    entry->nickname[0] = '\0';
+  }
 
   storage->entries[storage->count++] = entry;
 
@@ -278,12 +286,6 @@ int storage_load(Storage *storage) {
     return 0;
 
   storage->active_page_count = required_pages;
-
-  if (header.page_count < required_pages)
-    return 0;
-
-  storage->free_page_head = header.free_page_head;
-  storage->page_count = header.page_count;
 
   /* verify if storage has enough capacity */
   while (storage->capacity < entry_count) {

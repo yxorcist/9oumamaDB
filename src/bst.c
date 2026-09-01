@@ -38,9 +38,9 @@ static Node *insert_rec(Node *root, Entry *entry) {
   return root;
 }
 
-static int range_rec(Node *root, int a, int b, Entry *results, int capacity, int *count) {
+static void range_rec(Node *root, int a, int b, Entry *results, int capacity, int *count) {
   if (!root || *count >= capacity)
-    return 1;
+    return;
 
   if (root->entry->key > a)
     range_rec(root->left, a, b, results, capacity, count);
@@ -52,8 +52,6 @@ static int range_rec(Node *root, int a, int b, Entry *results, int capacity, int
 
   if (root->entry->key < b)
     range_rec(root->right, a, b, results, capacity, count);
-
-  return 1;
 }
 
 static void free_rec(Node *root) {
@@ -98,7 +96,7 @@ int bst_range(BST *tree, int a, int b, Entry *results, int capacity) {
 
   int count = 0;
 
-  count = range_rec(tree->root, a, b, results, capacity, 0);
+  range_rec(tree->root, a, b, results, capacity, &count);
 
   return count;
 }

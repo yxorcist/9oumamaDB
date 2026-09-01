@@ -4,6 +4,77 @@
 
 #include "http_dispatch.h"
 
+static void test_range(void) {
+  HTTPRequest http = {0};
+
+  strcpy(http.method, "GET");
+  strcpy(http.path, "/range?a=10&b=50");
+
+  Request request;
+
+  assert(http_request_to_db_request(&http, &request));
+
+  assert(request.type == CMD_RANGE);
+  assert(request.a == 10);
+  assert(request.b == 50);
+
+  request_destroy(&request);
+
+  printf("PASS: HTTP RANGE dispatch\n");
+}
+
+static void test_count(void) {
+  HTTPRequest http = {0};
+
+  strcpy(http.method, "GET");
+  strcpy(http.path, "/count");
+
+  Request request;
+
+  assert(http_request_to_db_request(&http, &request));
+  assert(request.type == CMD_COUNT);
+
+  request_destroy(&request);
+
+  printf("PASS: HTTP COUNT dispatch\n");
+}
+
+static void test_invalid_topk(void) {
+  HTTPRequest http = {0};
+  Request request;
+
+  strcpy(http.method, "GET");
+
+  strcpy(http.path, "/topk?k=0");
+  assert(!http_request_to_db_request(&http, &request));
+
+  strcpy(http.path, "/topk?k=101");
+  assert(!http_request_to_db_request(&http, &request));
+
+  strcpy(http.path, "/topk?k=abc");
+  assert(!http_request_to_db_request(&http, &request));
+
+  printf("PASS: HTTP invalid TOPK dispatch\n");
+}
+
+static void test_topk(void) {
+  HTTPRequest http = {0};
+
+  strcpy(http.method, "GET");
+  strcpy(http.path, "/topk?k=10");
+
+  Request request;
+
+  assert(http_request_to_db_request(&http, &request));
+
+  assert(request.type == CMD_TOPK);
+  assert(request.k == 10);
+
+  request_destroy(&request);
+
+  printf("PASS: HTTP TOPK dispatch\n");
+}
+
 static void test_get(void) {
   HTTPRequest http = {0};
 
@@ -28,7 +99,7 @@ static void test_post(void) {
 
   strcpy(http.method, "POST");
   strcpy(http.path, "/kv/42");
-  strcpy(http.body, "{\"value\":100}");
+  strcpy(http.body, "{\"value\":100,\"nickname\":\"alice\"}");
   http.body_length = strlen(http.body);
 
   Request request;
@@ -38,6 +109,7 @@ static void test_post(void) {
   assert(request.type == CMD_INSERT);
   assert(request.key == 42);
   assert(request.value == 100);
+  assert(strcmp(request.nickname, "alice") == 0);
 
   request_destroy(&request);
 
@@ -88,6 +160,10 @@ int main(void) {
   test_post();
   test_put();
   test_delete();
+  test_topk();
+  test_invalid_topk();
+  test_count();
+  test_range();
 
   return 0;
 }

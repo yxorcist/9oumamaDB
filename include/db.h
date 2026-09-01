@@ -9,10 +9,12 @@ typedef struct DB DB;
 DB *db_create(void);
 void db_free(DB *db);
 
-int db_insert(DB *db, int key, int value);
+int db_insert(DB *db, int key, int value, const char *nickname);
 int db_get(DB *db, int key, int *found);
 int db_delete(DB *db, int key);
 int db_update(DB *db, int key, int value);
+
+int db_get_entry(DB *db, int key, Entry *result);
 
 int db_topk(DB *db, int k, Entry *results);
 

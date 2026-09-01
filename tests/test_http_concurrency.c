@@ -31,7 +31,10 @@ static void *client_worker(void *arg) {
 
   char body[64];
 
-  int body_length = snprintf(body, sizeof(body), "{\"value\":%d}", args->value);
+  int body_length = snprintf(body, sizeof(body),
+                             "{\"value\":%d,\"nickname\":\"client%d\"}", 
+                             args->value,
+                             args->key);
 
   char request[256];
 

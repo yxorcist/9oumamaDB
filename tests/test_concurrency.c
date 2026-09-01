@@ -20,7 +20,7 @@ static void *writer_worker(void *arg) {
 
   for (int i = 0; i < KEYS_PER_THREAD; i++) {
     int key = args->start_key + i;
-    db_insert(args->db, key, i);
+    db_insert(args->db, key, i, "");
   }
 
   return NULL;
@@ -70,7 +70,7 @@ static void test_concurrent_read(void) {
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   pthread_t threads[THREAD_COUNT];
 
@@ -105,7 +105,7 @@ static void test_concurrent_update(void) {
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   pthread_t threads[THREAD_COUNT];
 
@@ -144,7 +144,7 @@ static void test_concurrent_count(void) {
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   pthread_t threads[THREAD_COUNT];
 
@@ -183,7 +183,7 @@ static void test_concurrent_topk(void) {
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   pthread_t threads[THREAD_COUNT];
 
@@ -220,7 +220,7 @@ static void test_concurrent_delete(void) {
   int total = THREAD_COUNT * KEYS_PER_THREAD;
 
   for (int i = 0; i < total; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   assert(db_count(db) == total);
 
@@ -261,7 +261,7 @@ static void test_concurrent_mixed(void) {
   int total = THREAD_COUNT * KEYS_PER_THREAD;
 
   for (int i = 0; i < total; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   pthread_t readers[THREAD_COUNT];
   pthread_t updaters[THREAD_COUNT];
@@ -316,7 +316,7 @@ static void test_concurrent_save(void) {
   assert(db != NULL);
 
   for (int i = 0; i < 100; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   pthread_t threads[THREAD_COUNT];
 
@@ -354,7 +354,7 @@ static void test_concurrent_delete_save(void) {
   int total = THREAD_COUNT * KEYS_PER_THREAD;
 
   for (int i = 0; i < total; i++)
-    db_insert(db, i, i);
+    db_insert(db, i, i, "");
 
   pthread_t threads[THREAD_COUNT];
   WorkerArgs args[THREAD_COUNT];
