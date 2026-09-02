@@ -7,8 +7,14 @@ BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 TEST_DIR = $(BUILD_DIR)/tests
 
+SAN_BUILD_DIR = build-sanitize
+SAN_OBJ_DIR = $(SAN_BUILD_DIR)/obj
+SAN_TEST_DIR = $(SAN_BUILD_DIR)/tests
+
 SRC = $(filter-out src/main.c,$(wildcard src/*.c))
+
 OBJ = $(patsubst src/%.c,$(OBJ_DIR)/%.o,$(SRC))
+SAN_OBJ = $(patsubst src/%.c,$(SAN_OBJ_DIR)/%.o,$(SRC))
 
 TESTS = \
 	test_page_manager \
@@ -29,7 +35,7 @@ TESTS = \
 	test_persistence \
 	test_http_fragmentation
 
-.PHONY: all run test clean
+.PHONY: all run test sanitize clean
 
 all: $(BUILD_DIR)/9oumamaDB
 
@@ -51,12 +57,24 @@ test: $(addprefix $(TEST_DIR)/,$(TESTS))
 		./$$test || exit 1; \
 	done
 
-sanitize: CFLAGS += $(SANITIZER_FLAGS)
-sanitize: clean test
+$(SAN_OBJ_DIR)/%.o: src/%.c
+	mkdir -p $(SAN_OBJ_DIR)
+	$(CC) $(CFLAGS) $(SANITIZER_FLAGS) -c $< -o $@
+
+$(SAN_TEST_DIR)/%: tests/%.c $(SAN_OBJ)
+	mkdir -p $(SAN_TEST_DIR)
+	$(CC) $(CFLAGS) $(SANITIZER_FLAGS) $(SAN_OBJ) $< -o $@
+
+sanitize: $(addprefix $(SAN_TEST_DIR)/,$(TESTS))
+	@for test in $^; do \
+		echo "=== $$test ==="; \
+		./$$test || exit 1; \
+	done
 
 run: all
 	./$(BUILD_DIR)/9oumamaDB
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -rf $(SAN_BUILD_DIR)
 	rm -f *.db
