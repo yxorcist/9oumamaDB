@@ -25,7 +25,9 @@ TESTS = \
 	test_http_concurrency \
 	test_http_request \
 	test_http_dispatch \
-	test_http_response
+	test_http_response \
+	test_persistence \
+	test_http_fragmentation
 
 .PHONY: all run test clean
 

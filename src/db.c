@@ -14,7 +14,6 @@ struct DB {
   Storage *storage;
   HashTable *ht;
   BST *tree;
-  Heap *heap;
 
   Entry **transaction_entries;
   int transaction_count;
@@ -41,7 +40,6 @@ static int db_rebuild_indexes(DB *db) {
 
   ht_clear(db->ht);
   bst_clear(db->tree);
-  heap_clear(db->heap);
 
   int count = storage_count(db->storage);
 
@@ -53,7 +51,6 @@ static int db_rebuild_indexes(DB *db) {
 
     ht_insert(db->ht, entry);
     bst_insert(db->tree, entry);
-    heap_insert(db->heap, entry);
   }
 
   return 1;
@@ -77,7 +74,6 @@ static void db_clear_unlocked(DB *db) {
 
   ht_clear(db->ht);
   bst_clear(db->tree);
-  heap_clear(db->heap);
 }
 
 static int db_persist(DB *db) {
@@ -95,17 +91,15 @@ DB *db_create(void) {
   db->storage = storage_create();
   db->ht = ht_create(1024);
   db->tree = bst_create();
-  db->heap = heap_create(1024);
 
   db->transaction_entries = NULL;
   db->in_transaction = 0;
   db->transaction_count = 0;
 
-  if (!db->storage || !db->ht || !db->tree || !db->heap) {
+  if (!db->storage || !db->ht || !db->tree) {
     storage_free(db->storage);
     ht_free(db->ht);
     bst_free(db->tree);
-    heap_free(db->heap);
     free(db);
     return NULL;
   }
@@ -114,7 +108,6 @@ DB *db_create(void) {
     storage_free(db->storage);
     ht_free(db->ht);
     bst_free(db->tree);
-    heap_free(db->heap);
     free(db);
     return NULL;
   }
@@ -146,7 +139,6 @@ void db_free(DB *db) {
   ht_free(db->ht);
   bst_free(db->tree);
   storage_free(db->storage);
-  heap_free(db->heap);
 
   pthread_mutex_destroy(&db->mutex);
 
@@ -175,7 +167,13 @@ int db_insert(DB *db, int key, int value, const char *nickname) {
 
   ht_insert(db->ht, entry);
   bst_insert(db->tree, entry);
-  heap_insert(db->heap, entry);
+
+  if (!db->in_transaction) {
+    if (!db_persist(db)) {
+      pthread_mutex_unlock(&db->mutex);
+      return 0;
+    }
+  }
 
   pthread_mutex_unlock(&db->mutex);
 
@@ -241,8 +239,14 @@ int db_delete(DB *db, int key) {
 
   ht_delete(db->ht, key);
   bst_delete(db->tree, key);
-  heap_remove(db->heap, entry);
   storage_delete_entry(db->storage, entry);
+
+  if (!db->in_transaction) {
+    if (!db_persist(db)) {
+      pthread_mutex_unlock(&db->mutex);
+      return 0;
+    }
+  }
 
   pthread_mutex_unlock(&db->mutex);
 
@@ -265,18 +269,36 @@ int db_update(DB *db, int key, int value) {
 
   entry->value = value;
 
+  if (!db->in_transaction) {
+    if (!db_persist(db)) {
+      pthread_mutex_unlock(&db->mutex);
+      return 0;
+    }
+  }
+
   pthread_mutex_unlock(&db->mutex);
 
   return 1;
 }
 
-void db_clear(DB *db) {
+int db_clear(DB *db) {
   if (!db)
-    return;
+    return 0;
 
   pthread_mutex_lock(&db->mutex);
+
   db_clear_unlocked(db);
+
+  if (!db->in_transaction) {
+    if (!db_persist(db)) {
+      pthread_mutex_unlock(&db->mutex);
+      return 0;
+    }
+  }
+
   pthread_mutex_unlock(&db->mutex);
+
+  return 1;
 }
 
 int db_topk(DB *db, int k, Entry *results) {
@@ -521,8 +543,8 @@ int db_rollback(DB *db) {
   return 1;
 }
 
-int db_execute_request(DB *db, Request *request) {
 
+int db_execute_request(DB *db, Request *request) {
   if (!db || !request)
     return 0;
 
@@ -562,8 +584,7 @@ int db_execute_request(DB *db, Request *request) {
     break;
 
   case CMD_CLEAR:
-    db_clear(db);
-    request->result = 1;
+    request->result = db_clear(db);
     break;
 
   case CMD_BEGIN:

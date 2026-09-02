@@ -169,6 +169,21 @@ int http_request_to_db_request(const HTTPRequest *http_request, Request *request
   if (!http_request || !request)
     return 0;
 
+  /* Transaction Operations */
+
+  if (strcmp(http_request->method, "POST") == 0) {
+    if (strcmp(http_request->path, "/transaction/begin") == 0)
+      return request_init(request, CMD_BEGIN, 0, 0);
+
+    if (strcmp(http_request->path, "/transaction/commit") == 0)
+      return request_init(request, CMD_COMMIT, 0, 0);
+
+    if (strcmp(http_request->path, "/transaction/rollback") == 0)
+      return request_init(request, CMD_ROLLBACK, 0, 0);
+  }
+
+  /* Generic GET Operations */
+
   if (strcmp(http_request->method, "GET") == 0) {
 
     if (strcmp(http_request->path, "/count") == 0)
@@ -196,6 +211,7 @@ int http_request_to_db_request(const HTTPRequest *http_request, Request *request
     }
   }
 
+  /* /kv/{key} */
   int key;
 
   if (!parse_key(http_request->path, &key))

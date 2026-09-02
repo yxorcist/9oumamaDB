@@ -4,6 +4,22 @@
 
 #include "http_response.h"
 
+static void test_conflict_response(void) {
+  char buffer[1024];
+
+  assert(http_response_build(buffer,
+                             sizeof(buffer),
+                             409,
+                             "application/json",
+                             "{\"error\":\"conflict\"}"));
+
+  assert(strstr(buffer, "HTTP/1.1 409 Conflict\r\n") != NULL);
+  assert(strstr(buffer, "Content-Type: application/json\r\n") != NULL);
+  assert(strstr(buffer, "{\"error\":\"conflict\"}") != NULL);
+
+  printf("PASS: 409 conflict response\n");
+}
+
 static void test_ok_response(void) {
   char buffer[1024];
 
@@ -40,6 +56,7 @@ int main(void) {
   test_ok_response();
   test_not_found_response();
   test_small_buffer();
+  test_conflict_response();
 
   return 0;
 }

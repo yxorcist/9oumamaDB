@@ -8,6 +8,10 @@
 #define THREAD_COUNT 4
 #define KEYS_PER_THREAD 100
 
+static void cleanup(void) {
+  remove("database.db");
+}
+
 typedef struct {
   DB *db;
   int start_key;
@@ -20,13 +24,16 @@ static void *writer_worker(void *arg) {
 
   for (int i = 0; i < KEYS_PER_THREAD; i++) {
     int key = args->start_key + i;
-    db_insert(args->db, key, i, "");
+
+    assert(db_insert(args->db, key, i, ""));
   }
 
   return NULL;
 }
 
 static void test_concurrent_insert(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
@@ -37,7 +44,8 @@ static void test_concurrent_insert(void) {
     args[i].db = db;
     args[i].start_key = i * KEYS_PER_THREAD;
 
-    assert(pthread_create(&threads[i], NULL, writer_worker, &args[i]) == 0);
+    assert(pthread_create(&threads[i], NULL,
+                          writer_worker, &args[i]) == 0);
   }
 
   for (int i = 0; i < THREAD_COUNT; i++)
@@ -46,6 +54,7 @@ static void test_concurrent_insert(void) {
   assert(db_count(db) == THREAD_COUNT * KEYS_PER_THREAD);
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent inserts\n");
 }
@@ -66,16 +75,19 @@ static void *reader_worker(void *arg) {
 }
 
 static void test_concurrent_read(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   pthread_t threads[THREAD_COUNT];
 
   for (int i = 0; i < THREAD_COUNT; i++)
-    assert(pthread_create(&threads[i], NULL, reader_worker, db) == 0);
+    assert(pthread_create(&threads[i], NULL,
+                          reader_worker, db) == 0);
 
   for (int i = 0; i < THREAD_COUNT; i++)
     assert(pthread_join(threads[i], NULL) == 0);
@@ -83,6 +95,7 @@ static void test_concurrent_read(void) {
   assert(db_count(db) == THREAD_COUNT * KEYS_PER_THREAD);
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent reads\n");
 }
@@ -94,23 +107,27 @@ static void *updater_worker(void *arg) {
 
   for (int i = 0; i < 1000; i++) {
     int key = i % (THREAD_COUNT * KEYS_PER_THREAD);
-    db_update(db, key, 9999);
+
+    assert(db_update(db, key, 9999));
   }
 
   return NULL;
 }
 
 static void test_concurrent_update(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   pthread_t threads[THREAD_COUNT];
 
   for (int i = 0; i < THREAD_COUNT; i++)
-    assert(pthread_create(&threads[i], NULL, updater_worker, db) == 0);
+    assert(pthread_create(&threads[i], NULL,
+                          updater_worker, db) == 0);
 
   for (int i = 0; i < THREAD_COUNT; i++)
     assert(pthread_join(threads[i], NULL) == 0);
@@ -124,6 +141,7 @@ static void test_concurrent_update(void) {
   }
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent updates\n");
 }
@@ -140,16 +158,19 @@ static void *counter_worker(void *arg) {
 }
 
 static void test_concurrent_count(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   pthread_t threads[THREAD_COUNT];
 
   for (int i = 0; i < THREAD_COUNT; i++)
-    assert(pthread_create(&threads[i], NULL, counter_worker, db) == 0);
+    assert(pthread_create(&threads[i], NULL,
+                          counter_worker, db) == 0);
 
   for (int i = 0; i < THREAD_COUNT; i++)
     assert(pthread_join(threads[i], NULL) == 0);
@@ -157,6 +178,7 @@ static void test_concurrent_count(void) {
   assert(db_count(db) == THREAD_COUNT * KEYS_PER_THREAD);
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent count\n");
 }
@@ -179,16 +201,19 @@ static void *topk_worker(void *arg) {
 }
 
 static void test_concurrent_topk(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   for (int i = 0; i < THREAD_COUNT * KEYS_PER_THREAD; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   pthread_t threads[THREAD_COUNT];
 
   for (int i = 0; i < THREAD_COUNT; i++)
-    assert(pthread_create(&threads[i], NULL, topk_worker, db) == 0);
+    assert(pthread_create(&threads[i], NULL,
+                          topk_worker, db) == 0);
 
   for (int i = 0; i < THREAD_COUNT; i++)
     assert(pthread_join(threads[i], NULL) == 0);
@@ -196,6 +221,7 @@ static void test_concurrent_topk(void) {
   assert(db_count(db) == THREAD_COUNT * KEYS_PER_THREAD);
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent TOPK\n");
 }
@@ -207,20 +233,23 @@ static void *delete_worker(void *arg) {
 
   for (int i = 0; i < KEYS_PER_THREAD; i++) {
     int key = args->start_key + i;
-    db_delete(args->db, key);
+
+    assert(db_delete(args->db, key));
   }
 
   return NULL;
 }
 
 static void test_concurrent_delete(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   int total = THREAD_COUNT * KEYS_PER_THREAD;
 
   for (int i = 0; i < total; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   assert(db_count(db) == total);
 
@@ -231,7 +260,8 @@ static void test_concurrent_delete(void) {
     args[i].db = db;
     args[i].start_key = i * KEYS_PER_THREAD;
 
-    assert(pthread_create(&threads[i], NULL, delete_worker, &args[i]) == 0);
+    assert(pthread_create(&threads[i], NULL,
+                          delete_worker, &args[i]) == 0);
   }
 
   for (int i = 0; i < THREAD_COUNT; i++)
@@ -248,6 +278,7 @@ static void test_concurrent_delete(void) {
   }
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent deletes\n");
 }
@@ -255,13 +286,15 @@ static void test_concurrent_delete(void) {
 /* ==================== Concurrent Mixed Workload ==================== */
 
 static void test_concurrent_mixed(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   int total = THREAD_COUNT * KEYS_PER_THREAD;
 
   for (int i = 0; i < total; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   pthread_t readers[THREAD_COUNT];
   pthread_t updaters[THREAD_COUNT];
@@ -269,13 +302,17 @@ static void test_concurrent_mixed(void) {
   pthread_t topks[THREAD_COUNT];
 
   for (int i = 0; i < THREAD_COUNT; i++) {
-    assert(pthread_create(&readers[i], NULL, reader_worker, db) == 0);
+    assert(pthread_create(&readers[i], NULL,
+                          reader_worker, db) == 0);
 
-    assert(pthread_create(&updaters[i], NULL, updater_worker, db) == 0);
+    assert(pthread_create(&updaters[i], NULL,
+                          updater_worker, db) == 0);
 
-    assert(pthread_create(&counters[i], NULL, counter_worker, db) == 0);
+    assert(pthread_create(&counters[i], NULL,
+                          counter_worker, db) == 0);
 
-    assert(pthread_create(&topks[i], NULL, topk_worker, db) == 0);
+    assert(pthread_create(&topks[i], NULL,
+                          topk_worker, db) == 0);
   }
 
   for (int i = 0; i < THREAD_COUNT; i++) {
@@ -296,6 +333,7 @@ static void test_concurrent_mixed(void) {
   }
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent mixed workload\n");
 }
@@ -312,17 +350,19 @@ static void *save_worker(void *arg) {
 }
 
 static void test_concurrent_save(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   for (int i = 0; i < 100; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   pthread_t threads[THREAD_COUNT];
 
-  for (int i = 0; i < THREAD_COUNT; i++) {
-    assert(pthread_create(&threads[i], NULL, save_worker, db) == 0);
-  }
+  for (int i = 0; i < THREAD_COUNT; i++)
+    assert(pthread_create(&threads[i], NULL,
+                          save_worker, db) == 0);
 
   for (int i = 0; i < THREAD_COUNT; i++)
     assert(pthread_join(threads[i], NULL) == 0);
@@ -330,9 +370,12 @@ static void test_concurrent_save(void) {
   assert(db_count(db) == 100);
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent saves\n");
 }
+
+/* ==================== Concurrent Delete + Save ==================== */
 
 static void *delete_and_save_worker(void *arg) {
   WorkerArgs *args = arg;
@@ -340,7 +383,7 @@ static void *delete_and_save_worker(void *arg) {
   for (int i = 0; i < KEYS_PER_THREAD; i++) {
     int key = args->start_key + i;
 
-    db_delete(args->db, key);
+    assert(db_delete(args->db, key));
     assert(db_save(args->db));
   }
 
@@ -348,13 +391,15 @@ static void *delete_and_save_worker(void *arg) {
 }
 
 static void test_concurrent_delete_save(void) {
+  cleanup();
+
   DB *db = db_create();
   assert(db != NULL);
 
   int total = THREAD_COUNT * KEYS_PER_THREAD;
 
   for (int i = 0; i < total; i++)
-    db_insert(db, i, i, "");
+    assert(db_insert(db, i, i, ""));
 
   pthread_t threads[THREAD_COUNT];
   WorkerArgs args[THREAD_COUNT];
@@ -363,7 +408,8 @@ static void test_concurrent_delete_save(void) {
     args[i].db = db;
     args[i].start_key = i * KEYS_PER_THREAD;
 
-    assert(pthread_create(&threads[i], NULL, delete_and_save_worker,
+    assert(pthread_create(&threads[i], NULL,
+                          delete_and_save_worker,
                           &args[i]) == 0);
   }
 
@@ -373,6 +419,7 @@ static void test_concurrent_delete_save(void) {
   assert(db_count(db) == 0);
 
   db_free(db);
+  cleanup();
 
   printf("PASS: concurrent delete + save\n");
 }
@@ -380,6 +427,8 @@ static void test_concurrent_delete_save(void) {
 /* ==================== Main ==================== */
 
 int main(void) {
+  cleanup();
+
   test_concurrent_insert();
   test_concurrent_read();
   test_concurrent_update();
@@ -389,6 +438,8 @@ int main(void) {
   test_concurrent_mixed();
   test_concurrent_save();
   test_concurrent_delete_save();
+
+  cleanup();
 
   return 0;
 }
