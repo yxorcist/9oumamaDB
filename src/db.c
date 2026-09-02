@@ -33,27 +33,38 @@ int db_in_transaction(DB *db) {
   return result;
 }
 
-static int db_rebuild_indexes(DB *db) {
+static int build_indexes(Storage *storage,
+                         HashTable *ht,
+                         BST *tree) {
+  if (!storage || !ht || !tree)
+    return 0;
 
+  int count = storage_count(storage);
+
+  for (int i = 0; i < count; i++) {
+    Entry *entry = storage_get_entry(storage, i);
+
+    if (!entry)
+      return 0;
+
+    if (!ht_insert(ht, entry))
+      return 0;
+
+    if (!bst_insert(tree, entry))
+      return 0;
+  }
+
+  return 1;
+}
+
+static int db_rebuild_indexes(DB *db) {
   if (!db)
     return 0;
 
   ht_clear(db->ht);
   bst_clear(db->tree);
 
-  int count = storage_count(db->storage);
-
-  for (int i = 0; i < count; i++) {
-    Entry *entry = storage_get_entry(db->storage, i);
-
-    if (!entry)
-      return 0;
-
-    ht_insert(db->ht, entry);
-    bst_insert(db->tree, entry);
-  }
-
-  return 1;
+  return build_indexes(db->storage, db->ht, db->tree);
 }
 
 static void transaction_clear(DB *db) {
@@ -165,8 +176,18 @@ int db_insert(DB *db, int key, int value, const char *nickname) {
     return 0;
   }
 
-  ht_insert(db->ht, entry);
-  bst_insert(db->tree, entry);
+  if (!ht_insert(db->ht, entry)) { 
+    storage_delete_entry(db->storage, entry);
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  if (!bst_insert(db->tree, entry)) {
+    ht_delete(db->ht, key);
+    storage_delete_entry(db->storage, entry);
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
 
   if (!db->in_transaction) {
     if (!db_persist(db)) {
@@ -402,18 +423,64 @@ int db_load(DB *db) {
 
   pthread_mutex_lock(&db->mutex);
 
-  db_clear_unlocked(db);
-
-  if (!storage_load(db->storage)) {
+  if (db->in_transaction) {
     pthread_mutex_unlock(&db->mutex);
     return 0;
   }
 
-  int result = db_rebuild_indexes(db);
+  Storage *new_storage = storage_create();
+
+  if (!new_storage) {
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  if (!storage_load(new_storage)) {
+    storage_free(new_storage);
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  HashTable *new_ht = ht_create(1024);
+
+  if (!new_ht) {
+    storage_free(new_storage);
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  BST *new_tree = bst_create();
+
+  if (!new_tree) {
+    ht_free(new_ht);
+    storage_free(new_storage);
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  if (!build_indexes(new_storage, new_ht, new_tree)) {
+    bst_free(new_tree);
+    ht_free(new_ht);
+    storage_free(new_storage);
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  Storage *old_storage = db->storage;
+  HashTable *old_ht = db->ht;
+  BST *old_tree = db->tree;
+
+  db->storage = new_storage;
+  db->ht = new_ht;
+  db->tree = new_tree;
+
+  bst_free(old_tree);
+  ht_free(old_ht);
+  storage_free(old_storage);
 
   pthread_mutex_unlock(&db->mutex);
 
-  return result;
+  return 1;
 }
 
 int db_begin(DB *db) {
@@ -481,17 +548,16 @@ int db_commit(DB *db) {
 
   storage_set_writes_enabled(db->storage, 1);
 
-  if (!db->in_transaction) {
-    pthread_mutex_unlock(&db->mutex);
-    return 0;
-  }
-
-  storage_set_writes_enabled(db->storage, 1);
-
   int result = db_persist(db);
 
   if (!result) {
+    /*
+     * Commit failed:
+     * keep transaction snapshot and transaction state
+     * so the caller can retry COMMIT or ROLLBACK.
+     */
     storage_set_writes_enabled(db->storage, 0);
+
     pthread_mutex_unlock(&db->mutex);
     return 0;
   }
@@ -515,34 +581,82 @@ int db_rollback(DB *db) {
     return 0;
   }
 
-  db_clear_unlocked(db);
+  Storage *new_storage = storage_create();
+
+  if (!new_storage) {
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
 
   for (int i = 0; i < db->transaction_count; i++) {
     Entry *snapshot = db->transaction_entries[i];
 
-    if (!storage_create_entry(db->storage, snapshot->key, snapshot->value, snapshot->nickname)) {
+    if (!storage_create_entry(new_storage,
+                              snapshot->key,
+                              snapshot->value,
+                              snapshot->nickname)) {
+      storage_free(new_storage);
       pthread_mutex_unlock(&db->mutex);
       return 0;
     }
   }
 
-  if (!db_rebuild_indexes(db)) {
+  HashTable *new_ht = ht_create(1024);
+
+  if (!new_ht) {
+    storage_free(new_storage);
     pthread_mutex_unlock(&db->mutex);
     return 0;
   }
 
-  storage_discard_pages(db->storage);
+  BST *new_tree = bst_create();
 
+  if (!new_tree) {
+    ht_free(new_ht);
+    storage_free(new_storage);
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  if (!build_indexes(new_storage, new_ht, new_tree)) {
+    bst_free(new_tree);
+    ht_free(new_ht);
+    storage_free(new_storage);
+
+    pthread_mutex_unlock(&db->mutex);
+    return 0;
+  }
+
+  /*
+   * The snapshot has been reconstructed successfully.
+   * Only now replace the live transaction state.
+   */
+  Storage *old_storage = db->storage;
+  HashTable *old_ht = db->ht;
+  BST *old_tree = db->tree;
+
+  db->storage = new_storage;
+  db->ht = new_ht;
+  db->tree = new_tree;
+
+  /*
+   * The rollback state corresponds to the already-persisted
+   * pre-transaction database.
+   */
+  storage_discard_pages(db->storage);
   storage_set_writes_enabled(db->storage, 1);
 
   transaction_clear(db);
   db->in_transaction = 0;
 
+  bst_free(old_tree);
+  ht_free(old_ht);
+  storage_free(old_storage);
+
   pthread_mutex_unlock(&db->mutex);
 
   return 1;
 }
-
 
 int db_execute_request(DB *db, Request *request) {
   if (!db || !request)

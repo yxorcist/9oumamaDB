@@ -7,6 +7,40 @@
 
 static void cleanup() { remove("database.db"); }
 
+static void test_load_during_transaction_fails(void) {
+  cleanup();
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  assert(db_insert(db, 1, 100, "one"));
+
+  assert(db_begin(db));
+
+  assert(db_insert(db, 2, 200, "two"));
+
+  assert(!db_load(db));
+
+  Entry entry;
+
+  assert(db_get_entry(db, 1, &entry));
+  assert(entry.value == 100);
+
+  assert(db_get_entry(db, 2, &entry));
+  assert(entry.value == 200);
+
+  assert(db_rollback(db));
+
+  assert(db_get_entry(db, 1, &entry));
+  assert(!db_get_entry(db, 2, &entry));
+
+  db_free(db);
+
+  remove("database.db");
+
+  printf("PASS: load rejected during transaction\n");
+}
+
 static void test_nickname_rollback(void) {
   cleanup();
 
@@ -425,6 +459,7 @@ int main(void) {
   test_nickname();
   test_nickname_persistence();
   test_nickname_rollback();
+  test_load_during_transaction_fails();
 
   cleanup();
 

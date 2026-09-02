@@ -16,6 +16,9 @@ static Node *create_node(Entry *entry) {
 
   Node *n = malloc(sizeof(Node));
 
+  if (!n)
+    return NULL;
+
   n->entry = entry;
   n->left = NULL;
   n->right = NULL;
@@ -23,17 +26,38 @@ static Node *create_node(Entry *entry) {
   return n;
 }
 
-static Node *insert_rec(Node *root, Entry *entry) {
+static Node *insert_rec(Node *root, Entry *entry, int *success) {
 
-  if (!root)
-    return create_node(entry);
+  if (!root) {
+    Node *node = create_node(entry);
 
-  if (entry->key < root->entry->key)
-    root->left = insert_rec(root->left, entry);
-  else if (entry->key > root->entry->key)
-    root->right = insert_rec(root->right, entry);
-  else
+    if (!node) {
+      *success = 0;
+      return NULL;
+    }
+
+    return node;
+  }
+
+  if (entry->key < root->entry->key) {
+    Node *new_left = insert_rec(root->left, entry, success);
+
+    if (!*success)
+      return root;
+
+    root->left = new_left;
+
+  } else if (entry->key > root->entry->key) {
+    Node *new_right = insert_rec(root->right, entry, success);
+
+    if (!*success)
+      return root;
+
+    root->right = new_right;
+
+  } else {
     root->entry = entry;
+  }
 
   return root;
 }
@@ -83,11 +107,15 @@ void bst_free(BST *tree) {
   free(tree);
 }
 
-void bst_insert(BST *tree, Entry *entry) {
+int bst_insert(BST *tree, Entry *entry) {
   if (!tree || !entry)
-    return;
+    return 0;
 
-  tree->root = insert_rec(tree->root, entry);
+  int success = 1;
+
+  tree->root = insert_rec(tree->root, entry, &success);
+
+  return success;
 }
 
 int bst_range(BST *tree, int a, int b, Entry *results, int capacity) {

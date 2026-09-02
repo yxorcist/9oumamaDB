@@ -56,7 +56,10 @@ void ht_free(HashTable *ht) {
   free(ht);
 }
 
-void ht_insert(HashTable *ht, Entry *entry) {
+int ht_insert(HashTable *ht, Entry *entry) {
+
+  if (!ht || !entry)
+    return 0;
 
   int idx = hash(entry->key, ht->size);
 
@@ -65,7 +68,7 @@ void ht_insert(HashTable *ht, Entry *entry) {
   while (n) {
     if (n->entry->key == entry->key) {
       n->entry = entry;
-      return;
+      return 1;
     }
     n = n->next;
   }
@@ -73,12 +76,14 @@ void ht_insert(HashTable *ht, Entry *entry) {
   Node *new_node = malloc(sizeof(Node));
 
   if (!new_node)
-    return;
+    return 0;
 
   new_node->entry = entry;
   new_node->next = ht->buckets[idx];
 
   ht->buckets[idx] = new_node;
+
+  return 1;
 }
 
 Entry *ht_get(HashTable *ht, int key) {

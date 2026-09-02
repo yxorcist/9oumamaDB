@@ -9,6 +9,63 @@ static void cleanup(void) {
   remove("database.db");
 }
 
+static void corrupt_database_file(void) {
+  FILE *file = fopen("database.db", "r+b");
+  assert(file != NULL);
+
+  unsigned char garbage[8] = {0};
+
+  assert(fwrite(garbage, 1, sizeof(garbage), file) == sizeof(garbage));
+  assert(fflush(file) == 0);
+
+  fclose(file);
+}
+
+static void test_failed_load_preserves_live_database(void) {
+  remove("database.db");
+
+  DB *db = db_create();
+  assert(db != NULL);
+
+  assert(db_insert(db, 1, 100, "one"));
+  assert(db_insert(db, 2, 200, "two"));
+
+  Entry entry;
+
+  assert(db_get_entry(db, 1, &entry));
+  assert(entry.value == 100);
+
+  /*
+   * Damage the persisted database header.
+   *
+   * The live in-memory DB should remain valid even though
+   * the next load attempt fails.
+   */
+  corrupt_database_file();
+
+  assert(!db_load(db));
+
+  /*
+   * Atomic LOAD guarantee:
+   * failed disk loading must not destroy live state.
+   */
+  assert(db_count(db) == 2);
+
+  assert(db_get_entry(db, 1, &entry));
+  assert(entry.value == 100);
+  assert(strcmp(entry.nickname, "one") == 0);
+
+  assert(db_get_entry(db, 2, &entry));
+  assert(entry.value == 200);
+  assert(strcmp(entry.nickname, "two") == 0);
+
+  db_free(db);
+
+  remove("database.db");
+
+  printf("PASS: failed load preserves live database\n");
+}
+
 static void test_clear_persistence(void) {
   cleanup();
 
@@ -286,6 +343,7 @@ int main(void) {
   test_commit_persistence();
   test_rollback_persistence();
   test_clear_persistence();
+  test_failed_load_preserves_live_database();
 
   cleanup();
 
